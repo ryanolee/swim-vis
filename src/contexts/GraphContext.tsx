@@ -27,6 +27,9 @@ export const GraphProvider: React.FC<Props> = ({ children }) => {
         autoResize: true,
         height: '100%',
         width: '100%',
+        physics: {
+          enabled: false
+        }
       }
     );
 

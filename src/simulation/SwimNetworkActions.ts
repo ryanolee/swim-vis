@@ -1,23 +1,51 @@
+import { DataSet, Edge } from "vis-network/declarations/entry-standalone";
 
+export type SwimNodeAction = {
+    type: "ping" | "ack" | "join" | "multicast_join" | "multicast_leave" | "multicast_data"
+    from: number;
+    to: number;
+    payload?: Record<string, string|number>;
+}
 
-type SwimActionTypes = {
-    type: "ping",
-    from: number,
-    to: number,
-} | {
-    type: "ack",
-    from: number,
-    to: number,
-} 
+interface ActionOptions {
+    render?: boolean;
+}
 
-class SwimNetworkAction<T extends SwimActionTypes> {
+export class SwimNetworkAction {
     constructor(
-        public type: T["type"],
-        public payload: Omit<T, "type">,
-        public lifeTime: number = 0,
+        public id: number,
+        public type: SwimNodeAction["type"],
+        public from: number,
+        public to: number,
+        public toToCompleteOn: number = 0,
+        public payload: Record<string, string|number> = {},
+        public options: ActionOptions = {},
     ){}
 
-    public tick() {
-        this.lifeTime--;
+    public isDone(numberOfTicks: number): boolean {
+        return this.toToCompleteOn <= numberOfTicks;
+    }
+
+    public addToGraph(edges: DataSet<Edge>){
+        if (this.options.render === false) {
+            return;
+        }
+        
+        edges.add({
+            id: this.id,
+            from: this.from,
+            to: this.to,
+            label: this.type,
+            arrows: "to",
+            length: 100,
+        });
+    }
+
+    public removeFromGraph(edges: DataSet<Edge>){
+        if (this.options.render === false) {
+            return;
+        }
+
+        edges.remove(this.id);
     }
 }

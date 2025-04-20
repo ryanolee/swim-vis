@@ -28,15 +28,14 @@ export const Sidebar: React.FC<SwimControlPanelProps> = ({title, children}) => {
       >
         <div className="p-6 flex flex-col h-full">
           <h2 className="text-2xl font-bold mb-4">{title}</h2>
-          <div className="flex-1">
+          <div className="flex-1 overflow-y-auto">
             {children}
-            
           </div>
           <button
-            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-            onClick={() => setIsOpen(false)}
+        className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+        onClick={() => setIsOpen(false)}
           >
-            Close
+        Close
           </button>
         </div>
       </div>
