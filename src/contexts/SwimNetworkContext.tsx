@@ -1,4 +1,5 @@
 import { SwimNetwork } from "@/simulation/SwimNetwork";
+import { SwimNetworkConfig } from "@/simulation/SwimNetworkConfig";
 import { createContext, useContext, useMemo } from "react";
 import { useGraphContext } from "./GraphContext";
 
@@ -8,7 +9,7 @@ export const SwimNetworkProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const graphContext = useGraphContext();
-  const swimNetwork = useMemo(() => new SwimNetwork(graphContext.graph, graphContext.data), [graphContext]);
+  const swimNetwork = useMemo(() => new SwimNetwork(graphContext.graph, graphContext.data, new SwimNetworkConfig()), [graphContext]);
   return (
     <SwimNetworkContext.Provider value={swimNetwork}>
       {children}

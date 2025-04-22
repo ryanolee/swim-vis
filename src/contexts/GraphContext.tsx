@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import { DataSet, Network } from "vis-network/standalone/esm/vis-network";
+import { DataSet, Edge, Network, Node } from "vis-network/standalone/esm/vis-network";
 
 interface ContextType {
   graph: Network;
@@ -16,9 +16,8 @@ type Props = {
 };
 
 export const GraphProvider: React.FC<Props> = ({ children }) => {
-  const nodes = new DataSet([]);
-  const edges = new DataSet([]);
-
+  const nodes = new DataSet<Node>([]);
+  const edges = new DataSet<Edge>([]);
 
   const graph = new Network(
       document.getElementById("network") as HTMLDivElement,
@@ -28,12 +27,27 @@ export const GraphProvider: React.FC<Props> = ({ children }) => {
         height: '100%',
         width: '100%',
         physics: {
-          enabled: false
+          enabled: true
         }
       }
     );
 
+    // Make sure physics are only applied to edges not nodes
+    graph.on("dragStart", (params) => {
+      for(const nodeId of params.nodes){
+        nodes.update({
+          id: nodeId, fixed: {x: false, y: false}
+        })
+      }
+    })
   
+    graph.on("dragEnd", (params) => {
+      for(const nodeId of params.nodes){
+        nodes.update({
+          id: nodeId, fixed: {x: true, y: true}
+        })
+      }
+    })
 
   return (
     <GraphContext.Provider value={{

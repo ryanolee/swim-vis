@@ -1,25 +1,41 @@
+import { SwimNetwork } from "./SwimNetwork";
 import { SwimNodeAction } from "./SwimNetworkActions";
 
-class SwimNetworkConfig {
+export const SWIM_PING_APPROACHES = [
+    "all",
+    "random",
+    "round_robin"
+]
+export const DEFAULT_PING_APPROACH = "random"
+
+export type SwimPingApproachType = typeof SWIM_PING_APPROACHES[number]
+
+
+
+export class SwimNetworkConfig {
     public eventTypeFilter: Set<SwimNodeAction["type"]> = new Set<SwimNodeAction["type"]>([])
+    public pingApproach: SwimPingApproachType = "random"
 
-    constructor(
-        protected onEventTypeFilterChange: (eventTypeFilter: Set<SwimNodeAction["type"]>) => void,
-    ) {
+    public constructor(
+        protected onEventFilterChange: () => void = () => {}
+    ) {}
+
+    public bindNetwork(network: SwimNetwork){
+        this.onEventFilterChange = network.rerenderActions.bind(network)
     }
 
-    protected addToEventTypeFilter(eventType: SwimNodeAction["type"]): void {
-        this.eventTypeFilter.add(eventType);
-        this.onEventTypeFilterChange(this.eventTypeFilter);
+    public addEventFilterType(filterType: SwimNodeAction["type"]){
+        this.eventTypeFilter.add(filterType)
+        this.onEventFilterChange()
     }
 
-    protected removeFromEventTypeFilter(eventType: SwimNodeAction["type"]): void {
-        this.eventTypeFilter.delete(eventType);
-        this.onEventTypeFilterChange(this.eventTypeFilter);
+    public removeEventFilterType(filterType: SwimNodeAction["type"]){
+        this.eventTypeFilter.delete(filterType)
+        this.onEventFilterChange()
     }
 
-    protected clearEventTypeFilter(): void {
-        this.eventTypeFilter.clear();
-        this.onEventTypeFilterChange(this.eventTypeFilter);
-    }    
+    public clearEventFilterType(){
+        this.eventTypeFilter.clear()
+        this.onEventFilterChange()
+    }
 }

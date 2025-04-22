@@ -16,12 +16,6 @@ export type UiNodeAction = {
   type: "remove",
   payload: { id: number },
 } | {
-  type: "activate",
-  payload: { id: number },
-} | {
-  type: "update_label",
-  payload: { id: number, label: string },
-} | {
   type: "update_fault",
   payload: { id: number, fault: boolean },
 }
@@ -46,6 +40,28 @@ export const useNodeUiControlReducer = () => {
             }
           ]
         };
+
+      case "update_fault":
+        swimNetwork.getNode(action.payload.id)?.setFaulty(action.payload.fault);
+        return {
+          ...state,
+          nodes: state.nodes.map(node => {
+            if (node.id === action.payload.id) {
+              return {
+                ...node,
+                fault: action.payload.fault,
+              };
+            }
+            return node;
+          })
+        };
+
+      case "remove":
+        swimNetwork.removeNode(action.payload.id);
+        return {
+          ...state,
+          nodes: state.nodes.filter(node => node.id !== action.payload.id),
+        }
      
       default:
         return state;

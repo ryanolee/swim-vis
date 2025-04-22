@@ -1,27 +1,34 @@
 import { DataSet, Edge, Network, Node } from "vis-network/standalone/esm/vis-network";
 import { SwimNetworkAction, SwimNodeAction } from "./SwimNetworkActions";
+import { SwimNetworkConfig } from "./SwimNetworkConfig";
+import { SwimNetworkPartition } from "./SwimNetworkPartition";
 import { SwimNode } from "./SwimNode";
 
 const NETWORK_TICK_LATENCY = 30;
 
+/**
+ * Top level simulation class that manages the network and all nodes in it
+ */
 export class SwimNetwork {
     private nodes: Record<number, SwimNode> = {};
+    private partitions: Record<number, SwimNetworkPartition> = {};
     private ongoingActions: SwimNetworkAction[] = [];
-    private ongoingExpectations: SwimNetworkAction[] = [];
     private tickerInterval: NodeJS.Timer | null = null;
 
     private currentTick: number = 0;
     private actionIdCounter: number = 0;
 
     constructor(
-        protected graph: Network,
-        protected graphData: {
+        public graph: Network,
+        public graphData: {
             nodes: DataSet<Node>;
             edges: DataSet<Edge>;
         },
-        protected idCounter: number = 0,
+        public config: SwimNetworkConfig
     ) {
-        this.tickerInterval = setInterval(() => this.tick(), 1000/15); // 60 FPS
+        this.tickerInterval = setInterval(() => this.tick(), 1); // 60 FPS
+        // Bind network to ongoing config changes
+        this.config.bindNetwork(this)
     }
 
     public addNode(id: number): SwimNode {
@@ -33,33 +40,62 @@ export class SwimNetwork {
         const randomPeer = this.getRandomNode();
 
         // Register with simulation
-        const node = new SwimNode(id, `Node id ${id}`, this.dispatchAction.bind(this));
+        const node = new SwimNode(id, `Node id ${id}`, this);
         this.nodes[node.id] = node;
 
         if (!!randomPeer) {
-            node.addKnownNodeIdAndReportJoin(randomPeer.id);
+            node.joinNetwork(randomPeer.id);
         }
         
         // Register with visualization library
-        this.graphData.nodes.add({ id: node.id, label: node.label });
+        node.rerender();
         return node;
+    }
+
+    public removeNode(id: number): void {
+        if (this.nodes[id]) {
+            this.nodes[id].leaveNetwork();
+            delete this.nodes[id];
+        }
+    }
+
+    public addPartition(id: number){
+        if (this.partitions[id]) {
+            return this.partitions[id];
+        }
+
+        const partition = new SwimNetworkPartition(id, false, this);
+        this.partitions[id] = partition;
+        partition.rerender(this);
+        return partition;
+    }
+
+    public getPartition(id: number): SwimNetworkPartition | null {
+        return this.partitions[id] || null;
+    }
+
+    public removePartition(id: number): void {
+        if (this.partitions[id]) {
+            this.partitions[id].remove(this);
+            delete this.partitions[id];
+        }
     }
 
     public getNode(id: number): SwimNode | null {
         return this.nodes[id] || null;
     }
 
-    public getRandomNode(): SwimNode | null {
-        const nodeIds = Object.keys(this.nodes);
-        if (nodeIds.length === 0) {
-            return null;
-        }
-        const randomId = nodeIds[Math.floor(Math.random() * nodeIds.length)];
-        return this.nodes[parseInt(randomId)];
+    public getAllNodeIds(): number[] {
+        return Object.keys(this.nodes).map(id => parseInt(id));
+    }
+
+    public getCurrentTick(): number {
+        return this.currentTick
     }
 
     public dispatchAction(action: SwimNodeAction): void {
         this.actionIdCounter++;
+
         const networkAction = new SwimNetworkAction(
             this.actionIdCounter,
             action.type,
@@ -69,9 +105,23 @@ export class SwimNetwork {
             action.payload,
         );
 
+        // Mark the action as lost if it intersects with any partition
+        if(this.actionIntersectsWithAnyPartition(networkAction)) {
+            networkAction.options.actionLost = true;
+        }
+
         // Push into simulation and onto graph
         this.ongoingActions.push(networkAction);
-        networkAction.addToGraph(this.graphData.edges);
+        networkAction.rerender(this.config, this.graphData.edges);
+    }
+
+    /**
+     * Rerenders ongoing actions. Normally used when event filters have been updated
+     */
+    public rerenderActions(){
+        for(const action of this.ongoingActions){
+            action.rerender(this.config, this.graphData.edges)
+        }
     }
     
     protected tick() {
@@ -82,14 +132,40 @@ export class SwimNetwork {
 
         for (const action of this.ongoingActions) {
             // Look for and prune actions that are done
-            if (action.isDone(this.currentTick)) {
-                action.removeFromGraph(this.graphData.edges);
+            if (!action.isDone(this.currentTick)) {
+                continue;
+            }
 
-                this.ongoingActions = this.ongoingActions.filter(a => a !== action);
+            // Remove from ongoing actions and simulation graph
+            action.removeFromGraph(this.graphData.edges);
+            this.ongoingActions = this.ongoingActions.filter(a => a !== action);
+            
+            // Check if the action is deliverable and deliver it to the node
+            if (action.isDeliverable()) {
                 this.getNode(action.to)?.receiveAction(action);
+            } 
+        }
+    }
 
+    protected getRandomNode(): SwimNode | null {
+        const nodeIds = Object.keys(this.nodes);
+        if (nodeIds.length === 0) {
+            return null;
+        }
+        const randomId = nodeIds[Math.floor(Math.random() * nodeIds.length)];
+        return this.nodes[parseInt(randomId)];
+    }
+
+    /**
+     * Checks if the action intersects with any partition in the network
+     */
+     protected actionIntersectsWithAnyPartition(action: SwimNetworkAction): boolean {
+        for (const partition of Object.values(this.partitions)) {
+            if (partition.actionIntersectsWithPartition(action)) {
+                return true;
             }
         }
+        return false;
     }
 
     protected stop() {
