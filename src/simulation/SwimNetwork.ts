@@ -26,7 +26,7 @@ export class SwimNetwork {
         },
         public config: SwimNetworkConfig
     ) {
-        this.tickerInterval = setInterval(() => this.tick(), 1); // 60 FPS
+        this.tickerInterval = setInterval(() => this.tick(), 1000/16); // 60 FPS
         // Bind network to ongoing config changes
         this.config.bindNetwork(this)
     }

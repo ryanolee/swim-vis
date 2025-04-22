@@ -6,6 +6,9 @@ import { useCallback, useReducer } from "react";
 export type UiConfigAction = {
     type: "add_action_filter" | "remove_action_filter",
     actionType: SwimNodeActionType
+} | {
+    type: "set_ping_approach",
+    pingApproach: SwimPingApproachType
 }
 
 export type UIConfigState = {
@@ -30,7 +33,13 @@ export const useNodeUiConfigReducer = () => {
         return {
           ...state,
           actionTypeFilters: state.actionTypeFilters.filter(type => type !== action.actionType)
-        }   
+        }
+      case "set_ping_approach":
+        swimNetwork.config.setPingApproach(action.pingApproach) 
+        return {
+          ...state,
+          pingApproach: action.pingApproach
+        }
       default:
         return state
     }   

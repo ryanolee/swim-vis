@@ -11,6 +11,11 @@ export class SwimNode {
     protected knownNodeIds: Set<number> = new Set<number>();
     protected deadNodeIds: Set<number> = new Set<number>();
     
+    // Internal round robin state variables
+    protected roundRobinIndex: number = 0;
+    protected roundRobinBuffer: number[] = [];
+
+
     protected expectations: Array<SwimNetworkExpectation> = [];
     protected incarnationNumber: number = 0;
     protected randomCycleOffset: number = Math.floor(Math.random() * PING_INTERVAL_TICKS);
@@ -32,6 +37,10 @@ export class SwimNode {
     public setFaulty(faulty: boolean): void {
         this.faulty = faulty;
         this.rerender();
+    }
+    public clearRoundRobinBuffer(): void {
+        this.roundRobinBuffer = [];
+        this.roundRobinIndex = 0;
     }
 
     protected addKnownNodeId(nodeId: number): void {
@@ -265,20 +274,24 @@ export class SwimNode {
     // Senders
     protected sendPing(currentTick: number): void {
         // Don't send ping to self
-        const peerId = this.getRandomKnownPeer()
-        if (peerId === null) {
-            return;
+        const peerIds = this.getPingablePeersBasedOnStrategy()
+        
+        for (const peerId of peerIds) {
+            if (peerId === this.id) {
+                continue;
+            }
+
+            // Dispatch ping actions to selected peer
+            this.sn.dispatchAction({
+                type: "ping",
+                from: this.id,
+                to: peerId,
+            });
+
+            // Setup an expectation that an ack will be received from the peer
+            this.addExpectation(new SwimNetworkExpectation("receive_ack", peerId, currentTick + TIMEOUT_TICKS));
         }
-
-        // Dispatch ping actions to selected peer
-        this.sn.dispatchAction({
-            type: "ping",
-            from: this.id,
-            to: peerId,
-        });
-
-        // Setup an expectation that an ack will be received from the peer
-        this.addExpectation(new SwimNetworkExpectation("receive_ack", peerId, currentTick + TIMEOUT_TICKS));
+        
     }
 
     protected sendPingReq( target: number){
@@ -308,11 +321,14 @@ export class SwimNode {
     protected markNodeAsDead(target: number): void {
         this.clearExpectationsFrom(target);
         this.knownNodeIds.delete(target);
+        // Scrub round robin buffer so it can be regenerated next ping
+        this.clearRoundRobinBuffer()
     }
 
     protected markNodeAsLeft(target: number): void {
         this.clearExpectationsFrom(target);
         this.knownNodeIds.delete(target);
+        this,this.clearRoundRobinBuffer()
         this.rerender()
     }
 
@@ -326,6 +342,10 @@ export class SwimNode {
     
     protected clearExpectationsFrom(from: number): void {
         this.expectations = this.expectations.filter(e => e.from !== from);
+    }
+
+    public clearAllExpectations(): void {
+        this.expectations = [];
     }
     
 
@@ -350,6 +370,24 @@ export class SwimNode {
         return knownPeers.slice(0, Math.min(this.knownNodeIds.size, n))
     }
 
+    /**
+     * Returns a list of pingable peers based on the current ping strategy.
+     */
+    protected getPingablePeersBasedOnStrategy(): number[] {
+        switch (this.sn.config.pingApproach) {
+            case "random":
+                const randomPeer = this.getRandomKnownPeer();
+                return randomPeer !== null ? [randomPeer] : [];
+            case "all":
+                return Array.from(this.knownNodeIds);
+            case "round_robin":
+                const roundRobinPeer = this.getRoundRobinPeer();
+                return roundRobinPeer !== null ? [roundRobinPeer] : [];  
+            default:
+                return []
+        }
+    }
+
     protected getRandomKnownPeer(): number | null {
         const knownPeers = Array.from(this.knownNodeIds);
         if (knownPeers.length === 0) {
@@ -357,6 +395,25 @@ export class SwimNode {
         }
         const randomIndex = Math.floor(Math.random() * knownPeers.length);
         return knownPeers[randomIndex];
+    }
+
+    protected getRoundRobinPeer(): number | null {
+        // If we have no known peers, return null
+        if (this.knownNodeIds.size === 0) {
+            return null;
+        }
+
+        // Cycle the buffer if the buffer is empty or the index is out of bounds
+        if (this.roundRobinBuffer.length === 0 || this.roundRobinIndex >= this.roundRobinBuffer.length) {
+            // During round robin keep a buffer of known node ids and shuffle them to cycle through
+            this.roundRobinBuffer = SwimNode.arrayShuffle(Array.from(this.knownNodeIds));   
+            this.roundRobinIndex = 0;
+        }
+
+        // Get the next peer in the round robin buffer
+        const peerId = this.roundRobinBuffer[this.roundRobinIndex];
+        this.roundRobinIndex++;
+        return peerId;        
     }
 
     // Internal render helpers

@@ -1,5 +1,6 @@
 import { useNodeUiConfigReducer } from "@/hooks/useNodeUiConfigReducer"
 import { SWIM_NODE_ACTION_TYPES } from "@/simulation/SwimNetworkActions"
+import { SWIM_PING_APPROACHES } from "@/simulation/SwimNetworkConfig"
 
 export const SwimNetworkConfigControls: React.FC = () => {
     const [config, dispatch] = useNodeUiConfigReducer()
@@ -26,6 +27,23 @@ export const SwimNetworkConfigControls: React.FC = () => {
                 <span className="text-gray-800">{filterType}</span>
             </label>
         ))}
-        
+        <h3 className="text-md font-semibold mb-2">Ping Approach</h3>
+        <p className="text-sm text-gray-600 mb-2">Select the ping approach:</p>
+        <select
+            value={config.pingApproach}
+            onChange={(e) =>
+                dispatch({
+                    type: "set_ping_approach",
+                    pingApproach: e.target.value as any,
+                })
+            }
+            className="form-select block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200"
+        >
+            {SWIM_PING_APPROACHES.map((approach) => (
+                <option key={approach} value={approach}>
+                    {approach}
+                </option>
+            ))}
+        </select>
     </>
 }

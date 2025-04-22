@@ -5,7 +5,7 @@ export const SWIM_PING_APPROACHES = [
     "all",
     "random",
     "round_robin"
-]
+] as const
 export const DEFAULT_PING_APPROACH = "random"
 
 export type SwimPingApproachType = typeof SWIM_PING_APPROACHES[number]
@@ -17,11 +17,17 @@ export class SwimNetworkConfig {
     public pingApproach: SwimPingApproachType = "random"
 
     public constructor(
-        protected onEventFilterChange: () => void = () => {}
+        protected onEventFilterChange: () => void = () => {},
+        protected onPingApproachChange: () => void = () => {}
     ) {}
 
     public bindNetwork(network: SwimNetwork){
         this.onEventFilterChange = network.rerenderActions.bind(network)
+        this.onPingApproachChange = () => network.getAllNodeIds().forEach((id) => {
+            const node = network.getNode(id)
+            node?.clearRoundRobinBuffer()
+            node?.clearAllExpectations()
+        })
     }
 
     public addEventFilterType(filterType: SwimNodeAction["type"]){
@@ -37,5 +43,12 @@ export class SwimNetworkConfig {
     public clearEventFilterType(){
         this.eventTypeFilter.clear()
         this.onEventFilterChange()
+    }
+
+    public setPingApproach(approach: SwimPingApproachType){
+        if(approach !== this.pingApproach){
+            this.pingApproach = approach
+            this.onPingApproachChange()
+        }
     }
 }
