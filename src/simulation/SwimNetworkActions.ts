@@ -1,5 +1,6 @@
 import { DataSet, Edge } from "vis-network/declarations/entry-standalone";
 import { SwimNetworkConfig } from "./SwimNetworkConfig";
+import { SwimRumor } from "@/simulation/SwimRumorMill";
 
 export const SWIM_NODE_ACTION_TYPES =  ["ping" , "timeout" , "ack" ,  "ping_req",  "join" , "multicast_join" , "multicast_leave" , "multicast_death"] as const
 export type SwimNodeActionType = typeof SWIM_NODE_ACTION_TYPES[number]
@@ -12,6 +13,11 @@ export type SwimNodeAction = {
     from: number;
     to: number;
     payload?: Record<string, string|number>;
+
+    /**
+     * Rumors piggybacked on the action.
+     */
+    piggybackedGossip?: SwimRumor[];
 }
 
 interface ActionOptions {
