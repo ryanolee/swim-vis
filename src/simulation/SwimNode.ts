@@ -1,7 +1,7 @@
 import { SwimNetwork } from "./SwimNetwork";
 import { SwimNetworkAction, SwimNodeAction } from "./SwimNetworkActions";
 import { SwimNetworkExpectation } from "./SwimNetworkExpectation";
-import { SwimRumor, SwimRumorMill } from "./SwimRumorMill";
+import { SwimRumor, SwimRumorMill } from "./gossip/SwimRumorMill";
 
 const PING_INTERVAL_TICKS = 100;
 
@@ -372,9 +372,10 @@ export class SwimNode {
     }
 
     protected disseminateAlive(target: number): void {
-        this.addKnownNodeId(target);
+       
         switch (this.sn.config.disseminationApproach) {
             case "multicast":
+                this.addKnownNodeId(target);
                 // Noop
                 break;
             case "gossip":
@@ -384,6 +385,8 @@ export class SwimNode {
                     originator: this.id,
                     incarnationNumber: this.incarnationNumber,
                 });
+                // Listen to rumors
+                this.rumorMill.heedRumors(this);
                 break;
             default:
                 console.warn("Unknown dissemination approach", this.sn.config.disseminationApproach);
@@ -455,6 +458,11 @@ export class SwimNode {
                 break;
             default:
                 console.warn("Unknown rumor type", rumor.type);
+        }
+
+        // Rerender the node if the overlay mode is set to "who_knows_who"
+        if (this.sn.config.overlayMode !== "none" && this.sn.config.selectedNodeId !== null) {
+            this.rerender();
         }
     }
 

@@ -1,27 +1,14 @@
-import { SwimNodeAction } from "@/simulation/SwimNetworkActions"
-import { SwimNode } from "./SwimNode"
-
-const MAX_GOSSIP_PER_ACTION = 6
-const GOSSIP_BUFFER_SIZE = 30
-
-// Should be n log(x)
-// where x is the number of nodes in the network
-// and n is a small constant. Given the known small size of the network just set to a constant
-const MAXIMUM_SHARES = 4
+import { RUMOR_TYPES, SwimRumor, SwimRumorType } from "./SwimRumorMill"
 
 
-const RUMOR_TYPES = [
-    "alive",
-    "dead"
-] as const
-
-export type SwimRumorType = typeof RUMOR_TYPES[number]
-
-export type SwimRumor = {
-    subject: number
-    incarnationNumber: number
-    originator: number
-    type: SwimRumorType
+/**
+ * Bias for the different types of rumors
+ * The lower the number the more time is is shared
+ */
+const GOSSIP_BIAS: Record<SwimRumorType, number> = {
+    "alive": 1,
+    "dead": 1,
+    
 }
 
 type KnownSwimRumor = {
@@ -31,10 +18,15 @@ type KnownSwimRumor = {
     numberOfTimesGossiped: number
 }
 
+// Should be n log(x)
+// where x is the number of nodes in the network
+// and n is a small constant. Given the known small size of the network just set to a constant
+const MAXIMUM_SHARES = 4
+
 /**
  * Buffer for a single type of rumor
  */
-class SwimRumorBuffer {
+export class SwimRumorBuffer {
     private knownRumors: Set<number> = new Set()
     private buffer: KnownSwimRumor[] = []
     constructor (
@@ -78,12 +70,12 @@ class SwimRumorBuffer {
         // Pass 1: Attempt to get even distribution of gossip types to share
         for(let i = 0; i < this.buffer.length; i++) {
             const item = this.buffer[i]
-            if (numberOfTypesObtained[item.rumor.type] <= targetThreshold) {
+            if (numberOfTypesObtained[item.rumor.type] < targetThreshold) {
                 numberOfTypesObtained[item.rumor.type]++
                 gossipToShare.push(item.rumor)
 
                 // Increment original reference to the rumor
-                this.buffer[i].numberOfTimesGossiped++
+                this.buffer[i].numberOfTimesGossiped += GOSSIP_BIAS[item.rumor.type]
             }
 
             if (gossipToShare.length >= n) {
@@ -97,7 +89,7 @@ class SwimRumorBuffer {
                 const item = this.buffer[i]
                 if (!gossipToShare.includes(item.rumor)) {
                     gossipToShare.push(item.rumor)
-                    this.buffer[i].numberOfTimesGossiped++
+                    this.buffer[i].numberOfTimesGossiped += GOSSIP_BIAS[item.rumor.type]
                 }
 
                 if (gossipToShare.length >= n) {
@@ -130,7 +122,7 @@ class SwimRumorBuffer {
 
     public forgetAboutRumorsRelatingTo(id: number) {
         // Remove all rumors relating to the id
-        if(!this.knownRumors.has(id)) {
+        if(this.knownRumors.has(id)) {
             this.knownRumors.delete(id)
             this.buffer = this.buffer.filter((r) => r.rumor.subject !== id)
         }
@@ -168,107 +160,5 @@ class SwimRumorBuffer {
     protected resortBuffer() {
         // Sort the buffer by number of times gossiped
         this.buffer.sort((a, b) =>  a.numberOfTimesGossiped - b.numberOfTimesGossiped )
-    }
-}
-
-/**
- * The Swim rumor mill contains 
- */
-export class SwimRumorMill {
-    public rumors: SwimRumorBuffer = new SwimRumorBuffer(GOSSIP_BUFFER_SIZE)
-
-    public constructor () {}
-    
-    /**
-     * Listens to and takes onboa
-     */
-    public listenToGossip(action: SwimNodeAction) {
-        if (!action.piggybackedGossip) {
-            return
-        }
-
-        this.consumeRumors(action.piggybackedGossip)
-    }
-
-    /**
-     * Accepts a rumor and adds it to the rumor mill
-     */
-    public addRumor(rumor: SwimRumor) {
-        this.consumeRumors([
-            rumor
-        ])
-    }
-
-    /**
-     * Consume all unheeded rumors and pass them back to the node to handle
-     */
-    public heedRumors(node: SwimNode) {
-        const unheededRumors = this.rumors.peekAtUnheededRumors()
-
-        if (unheededRumors.length === 0) {
-            return
-        }
-
-        this.rumors.heedAllRumors()
-        unheededRumors.forEach((rumor) => {
-            node.handleRumor(rumor)
-        })
-    }
-
-    /**
-     * Clears out all rumors from the rumor mill.
-     */
-    public resetBuffers() {
-        this.rumors = new SwimRumorBuffer(GOSSIP_BUFFER_SIZE)
-    }
-
-    /**
-     * Injects the most relevant rumors into the action to be sent.
-     */
-    public spreadGossip(action: SwimNodeAction) {
-        action.piggybackedGossip = 
-            this.rumors.talkAboutNRumors(MAX_GOSSIP_PER_ACTION)
-        
-    }
-
-    protected consumeRumors(rumors: SwimRumor[]) {
-        this.filterIrrelevantRumors(rumors).forEach((rumor) => {
-            this.forgetAboutRumorsRelatingTo(rumor.subject)
-            this.rumors.addRumor(rumor)
-        })
-    }
-
-    protected filterIrrelevantRumors(rumors: SwimRumor[]): SwimRumor[] {
-        const gossipMap = this.rumors.asMap()
-        return rumors.filter((rumor) => 
-            !gossipMap.has(rumor.subject) || 
-            this.getTheHotterGossip(gossipMap.get(rumor.subject) as SwimRumor, rumor) === rumor
-        )
-    }
-
-    private forgetAboutRumorsRelatingTo(id: number){
-        this.rumors.forgetAboutRumorsRelatingTo(id)
-    }
-
-    protected getTheHotterGossip(rumor1: SwimRumor, rumor2: SwimRumor): SwimRumor {
-        if (rumor1.incarnationNumber > rumor2.incarnationNumber) {
-            return rumor1
-        } 
-
-        if (rumor1.incarnationNumber < rumor2.incarnationNumber) {
-            return rumor2
-        }
-
-        // Dead wins over alive
-        if (rumor1.type === "dead"){
-            return rumor1
-        }
-
-        if (rumor2.type === "dead"){
-            return rumor2
-        }
-
-        return rumor1
-        
     }
 }

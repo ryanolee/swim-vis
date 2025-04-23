@@ -1,4 +1,4 @@
-import { SwimRumor } from "@/simulation/SwimRumorMill";
+import { SwimRumor } from "@/simulation/gossip/SwimRumorMill";
 import { DataSet, Edge } from "vis-network/declarations/entry-standalone";
 import { SwimNetworkConfig } from "./SwimNetworkConfig";
 
@@ -67,7 +67,7 @@ export class SwimNetworkAction {
     public rerender(config: SwimNetworkConfig, edges: DataSet<Edge>){
         // Render if there are no filters or the event type is in the allowed filters
         this.shouldRender(config)  ?
-            this.addToGraph(edges) :
+            this.addToGraph(config ,edges) :
             this.removeFromGraph(edges)
     }
 
@@ -75,7 +75,7 @@ export class SwimNetworkAction {
         this.piggybackedGossip = []
     }
 
-    public addToGraph(edges: DataSet<Edge>){
+    public addToGraph(config: SwimNetworkConfig, edges: DataSet<Edge>){
         if (this.options.render === false) {
             return;
         }
@@ -87,7 +87,7 @@ export class SwimNetworkAction {
             from: this.from,
             to: this.to,
             label: this.getLabel(),
-            color: this.getColor(),
+            color: this.getColor(config),
             arrows: isMulticast ? undefined : "to",
             dashes: isMulticast ? true : false,
             length: 100,
@@ -138,7 +138,24 @@ export class SwimNetworkAction {
         }).join("");
     }
 
-    protected getColor(): string {
+    protected getColor(config: SwimNetworkConfig): string {
+        if (
+            config.overlayMode === "who_knows_who"
+            && config.selectedNodeId !== null
+        ) {
+            const relevantGossip = this.piggybackedGossip.filter((gossip) => {
+                return gossip.subject === config.selectedNodeId;
+            }).pop();
+
+            if (!relevantGossip) {
+                return "#808080";
+            }
+
+            return relevantGossip.type === "dead" ?
+                "#FF0000" :
+                "#00FF00";
+        }
+
         if (this.options.actionLost) {
             return "#808080";
         }

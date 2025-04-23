@@ -34,7 +34,7 @@ export class SwimNetwork {
         public config: SwimNetworkConfig
     ) {
         this.placement = new SwimNodePlacement(this);
-        this.tickerInterval = setInterval(() => this.tick(), 1000/16); // 60 FPS
+        this.tickerInterval = setInterval(() => this.tick(), 1000/30); // 60 FPS
         // Bind network to ongoing config changes
         this.config.bindNetwork(this)
     }
@@ -45,7 +45,7 @@ export class SwimNetwork {
         }
 
         // Get a random peer to register with before adding another node
-        const randomPeer = this.getRandomNoneDeadNode();
+        const randomPeer = this.getAliveDeadNode();
 
         // Register with simulation
         const node = new SwimNode(id, `Node id ${id}`, this);
@@ -177,7 +177,7 @@ export class SwimNetwork {
         }
     }
 
-    protected getRandomNoneDeadNode(): SwimNode | null {
+    protected getAliveDeadNode(): SwimNode | null {
         const candidateNodes = Object.values(this.nodes).filter(node => !node.isDisabled());
 
         if (candidateNodes.length === 0) {
@@ -222,19 +222,6 @@ export class SwimNetwork {
         ) {
             console.warn(`Failsafe render triggered due to too many actions (currentCount: ${this.ongoingActions.length} > ${MAXIMUM_NUMBER_OF_RENDERED_ACTIONS})`)
             this.rerenderNodes()
-        }
-    }
-
-    protected stop() {
-        if (this.tickerInterval) {
-            clearInterval(this.tickerInterval);
-            this.tickerInterval = null;
-        }
-    }
-
-    public start() {
-        if (!this.tickerInterval) {
-            this.tickerInterval = setInterval(() => this.tick(), 1000); // 60 FPS
         }
     }
 }
