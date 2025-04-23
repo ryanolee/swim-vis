@@ -5,6 +5,9 @@ const SwimNetworkPartitionControls: React.FC = () => {
    const [state, dispatch] =  useNodeUiPartitionReducer()
     return (
          <>
+               <button className="bg-blue-600 text-white rounded p-2" onClick={() => dispatch({ type: "add" })}>
+                    Add Partition
+               </button>
               {state.partitions.map((partition) => (
                 <div key={partition.id} className="flex items-center justify-between p-2 border-b">
                      <span>Partition {partition.id}</span>
@@ -21,9 +24,7 @@ const SwimNetworkPartitionControls: React.FC = () => {
                      </button>
                 </div>
               ))}
-              <button className="bg-blue-600 text-white rounded p-2" onClick={() => dispatch({ type: "add" })}>
-                Add Partition
-              </button>
+              
          </>
     )
 }

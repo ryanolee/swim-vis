@@ -4,7 +4,7 @@ import { SwimNetworkExpectation } from "./SwimNetworkExpectation";
 import { SwimRumor, SwimRumorMill } from "./SwimRumorMill";
 
 const PING_INTERVAL_TICKS = 100;
-const HEED_GOSSIP_INTERVAL = 20;
+
 
 const TIMEOUT_TICKS = 100;
 const EXPECTATION_CHECK_INTERVAL = 5;
@@ -72,7 +72,12 @@ export class SwimNode {
         if (nodeId === this.id) {
             return;
         }
+
+        const wasPreviouslyKnown = this.knownNodeIds.has(nodeId);
         this.knownNodeIds.add(nodeId);
+        if (!wasPreviouslyKnown) {
+            this.rerender();
+        }
     }
 
     // top level actions
@@ -124,10 +129,6 @@ export class SwimNode {
                 }
             }
         }
-
-        if ((currentTick +this.randomCycleOffset) % HEED_GOSSIP_INTERVAL === 0) {
-            this.rumorMill.heedRumors(this);
-        }
     }
 
     public rerender(): void {
@@ -149,6 +150,7 @@ export class SwimNode {
         }
 
         this.rumorMill.listenToGossip(action);
+        this.rumorMill.heedRumors(this);
 
         switch (action.type) {
             case "ping":
@@ -340,8 +342,10 @@ export class SwimNode {
     protected markNodeAsDead(target: number): void {
         this.clearExpectationsFrom(target);
         this.knownNodeIds.delete(target);
+        
         // Scrub round robin buffer so it can be regenerated next ping
         this.clearRoundRobinBuffer()
+        this.rerender()
     }
 
     protected markNodeAsLeft(target: number): void {
@@ -497,7 +501,15 @@ export class SwimNode {
     public isDisabled(): boolean {
         return this.disabled;
     }
-    
+
+    public isFaulty(): boolean {
+        return this.faulty;
+    }
+
+    public hasLeft(): boolean {
+        return this.left;
+    }
+
 
     // Internal peer getters
     protected getNRandomPeers(n: number): number[] {
@@ -553,6 +565,15 @@ export class SwimNode {
 
     // Internal render helpers
     protected getColor(): string {
+        // Handle overlay mode
+        if (
+            this.sn.config.overlayMode === "who_knows_who" &&
+            this.sn.config.selectedNodeId !== null
+        ) {
+           return this.getColorForWhoKnowsWho()
+        }
+
+        // Default rendering approach
         if (this.left || this.hasHeardOfOwnDeath) {
             return "#e5e5e5";
         } 
@@ -564,7 +585,23 @@ export class SwimNode {
         return "#90EE90";
     }
 
+    protected getColorForWhoKnowsWho(): string {
+        const selectedNode = this.sn.getNode(this.sn.config.selectedNodeId ?? -1);
+        if (selectedNode?.id === this.id ) {
+            return "#add8e6";
+        }
+
+        if (this.knownNodeIds.has(selectedNode?.id ?? -1)) {
+            return "#90EE90";
+        }
+
+        return "#e5e5e5"
+    }
+
+    
+
     protected getLabel(): string {
+        // Default rendering approach
         if (this.hasHeardOfOwnDeath) {
             return `${this.label} (irrefutably declared as dead)`;
         }
@@ -579,6 +616,9 @@ export class SwimNode {
 
         return this.label;
     }
+
+    
+
 
     static arrayShuffle<T>(array: T[]): T[]{
         return array.map(value => ({ value, sort: Math.random() }))

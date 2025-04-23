@@ -2,6 +2,7 @@ import "@radix-ui/themes/styles.css";
 import { SwimNetworkConfigControls } from "./components/controls/SwimNetworkConfigControls";
 import SwimNetworkControls from "./components/controls/SwimNetworkControls";
 import SwimNetworkPartitionControls from "./components/controls/SwimNetworkPartitionControls";
+import { SwimNetworkPlacement } from "./components/controls/SwimNetworkPlacement";
 import { Sidebar } from "./components/sidebar/Sidebar";
 import { GraphProvider } from "./contexts/GraphContext";
 import { SwimNetworkProvider } from "./contexts/SwimNetworkContext";
@@ -16,6 +17,9 @@ function App() {
         <SwimNetworkPartitionControls />
         <hr/>
         <SwimNetworkConfigControls />
+        <hr/>
+        <SwimNetworkPlacement />
+        <hr/>
       </Sidebar>
     </SwimNetworkProvider>
   </GraphProvider>;

@@ -1,7 +1,7 @@
 import { SwimNodeAction } from "@/simulation/SwimNetworkActions"
 import { SwimNode } from "./SwimNode"
 
-const MAX_GOSSIP_PER_ACTION = 4
+const MAX_GOSSIP_PER_ACTION = 6
 const GOSSIP_BUFFER_SIZE = 30
 
 // Should be n log(x)
@@ -167,7 +167,7 @@ class SwimRumorBuffer {
 
     protected resortBuffer() {
         // Sort the buffer by number of times gossiped
-        this.buffer.sort((a, b) => b.numberOfTimesGossiped - a.numberOfTimesGossiped)
+        this.buffer.sort((a, b) =>  a.numberOfTimesGossiped - b.numberOfTimesGossiped )
     }
 }
 

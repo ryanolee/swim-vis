@@ -1,6 +1,7 @@
 import { useNodeUiConfigReducer } from "@/hooks/useNodeUiConfigReducer"
 import { SWIM_NODE_ACTION_TYPES } from "@/simulation/SwimNetworkActions"
-import { SWIM_DISSEMINATION_APPROACHES, SWIM_PING_APPROACHES } from "@/simulation/SwimNetworkConfig"
+import { SWIM_DISSEMINATION_APPROACHES, SWIM_OVERLAY_MODES, SWIM_PING_APPROACHES } from "@/simulation/SwimNetworkConfig"
+import { SwimConfigSelector } from "./inputs/SwimConfigSelector"
 
 export const SwimNetworkConfigControls: React.FC = () => {
     const [config, dispatch] = useNodeUiConfigReducer()
@@ -27,41 +28,41 @@ export const SwimNetworkConfigControls: React.FC = () => {
                 <span className="text-gray-800">{filterType}</span>
             </label>
         ))}
-        <h3 className="text-md font-semibold mb-2">Ping Approach</h3>
-        <p className="text-sm text-gray-600 mb-2">Select the ping approach:</p>
-        <select
-            value={config.pingApproach}
-            onChange={(e) =>
+        <SwimConfigSelector
+            options={SWIM_PING_APPROACHES}
+            onChange={(selected) => {
                 dispatch({
                     type: "set_ping_approach",
-                    pingApproach: e.target.value as any,
+                    pingApproach: selected as any,
                 })
-            }
-            className="form-select block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200"
-        >
-            {SWIM_PING_APPROACHES.map((approach) => (
-                <option key={approach} value={approach}>
-                    {approach}
-                </option>
-            ))}
-        </select>
-        <h3 className="text-md font-semibold mb-2">Dissemination Approach</h3>
-        <p className="text-sm text-gray-600 mb-2">Select the dissemination approach:</p>
-        <select
-            value={config.disseminationApproach}
-            onChange={(e) =>
+            }}
+            defaultValue={config.pingApproach}
+            label="Ping Approach"
+            description="Select the ping approach to use in the network."
+        />
+        <SwimConfigSelector
+            options={SWIM_DISSEMINATION_APPROACHES}
+            onChange={(selected) => {
                 dispatch({
                     type: "set_dissemination_approach",
-                    disseminationApproach: e.target.value as any,
+                    disseminationApproach: selected as any,
                 })
-            }
-            className="form-select block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200"
-        >
-            {SWIM_DISSEMINATION_APPROACHES.map((approach) => (
-                <option key={approach} value={approach}>
-                    {approach}
-                </option>
-            ))}
-        </select>
+            }}
+            defaultValue={config.disseminationApproach}
+            label="Dissemination Approach"
+            description="Select the dissemination approach to use in the network."
+        />
+        <SwimConfigSelector
+            options={SWIM_OVERLAY_MODES}
+            onChange={(selected) => {
+                dispatch({
+                    type: "set_overlay_mode",
+                    overlayMode: selected as any,
+                })
+            }}
+            defaultValue={config.overlayMode}
+            label="Overlay Mode"
+            description="Select the overlay mode to use in the network."
+        />
     </>
 }

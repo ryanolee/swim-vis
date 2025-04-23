@@ -7,6 +7,9 @@ const SwimNetworkControls: React.FC = () => {
     return (
         <>
             <h2 className="text-lg font-semibold mb-4">Network Controls</h2>
+            <button className="bg-blue-600 text-white rounded p-2" onClick={() => dispatch({ type: "add" })}>
+                Add Node
+            </button>
             {state.nodes.map((node) => (
                 <div key={node.id} className="flex items-center justify-between p-2 border-b">
                     <span>{node.label}</span>
@@ -24,9 +27,6 @@ const SwimNetworkControls: React.FC = () => {
                     </button>
                 </div>
             ))}
-            <button className="bg-blue-600 text-white rounded p-2" onClick={() => dispatch({ type: "add" })}>
-                Add Node
-            </button>
         </>
     )
 }

@@ -1,6 +1,6 @@
 import { useSwimNetworkContext } from "@/contexts/SwimNetworkContext";
 import { SwimNodeActionType } from "@/simulation/SwimNetworkActions";
-import { DEFAULT_DISSEMINATION_APPROACH, DEFAULT_PING_APPROACH, SwimDisseminationApproachType, SwimPingApproachType } from "@/simulation/SwimNetworkConfig";
+import { DEFAULT_DISSEMINATION_APPROACH, DEFAULT_OVERLAY_MODE, DEFAULT_PING_APPROACH, SwimDisseminationApproachType, SwimOverlayModeType, SwimPingApproachType } from "@/simulation/SwimNetworkConfig";
 import { useCallback, useReducer } from "react";
 
 export type UiConfigAction = {
@@ -12,12 +12,16 @@ export type UiConfigAction = {
 } | {
     type: "set_dissemination_approach",
     disseminationApproach: SwimDisseminationApproachType
+} | {
+    type: "set_overlay_mode",
+    overlayMode: SwimOverlayModeType
 }
 
 export type UIConfigState = {
     actionTypeFilters: SwimNodeActionType[]
     pingApproach: SwimPingApproachType
     disseminationApproach: SwimDisseminationApproachType
+    overlayMode: SwimOverlayModeType
 }
 
 export const useNodeUiConfigReducer = () => {
@@ -50,10 +54,22 @@ export const useNodeUiConfigReducer = () => {
           ...state,
           disseminationApproach: action.disseminationApproach
         }
+      case "set_overlay_mode":
+        swimNetwork.config.setOverlayMode(action.overlayMode)
+        return {
+          ...state,
+          overlayMode: action.overlayMode
+        }
+      
       default:
         return state
     }   
   }, [swimNetwork]);
 
-  return useReducer(reducer, {actionTypeFilters: [], pingApproach: DEFAULT_PING_APPROACH, disseminationApproach: DEFAULT_DISSEMINATION_APPROACH} as UIConfigState);
+  return useReducer(reducer, {
+    actionTypeFilters: [],
+    pingApproach: DEFAULT_PING_APPROACH, 
+    disseminationApproach: DEFAULT_DISSEMINATION_APPROACH,
+    overlayMode: DEFAULT_OVERLAY_MODE,
+  } as UIConfigState);
 }
