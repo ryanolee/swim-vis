@@ -8,6 +8,13 @@ export const SWIM_PING_APPROACHES = [
 ] as const
 export const DEFAULT_PING_APPROACH = "random"
 
+export const SWIM_DISSEMINATION_APPROACHES = [
+    "multicast",
+    "gossip",
+    "gossip_with_suspicion",
+] as const
+export const DEFAULT_DISSEMINATION_APPROACH = "multicast"
+
 export type SwimPingApproachType = typeof SWIM_PING_APPROACHES[number]
 
 
@@ -15,6 +22,7 @@ export type SwimPingApproachType = typeof SWIM_PING_APPROACHES[number]
 export class SwimNetworkConfig {
     public eventTypeFilter: Set<SwimNodeAction["type"]> = new Set<SwimNodeAction["type"]>([])
     public pingApproach: SwimPingApproachType = "random"
+    public diseminationApproach: SwimPingApproachType = "random"
 
     public constructor(
         protected onEventFilterChange: () => void = () => {},
@@ -43,6 +51,12 @@ export class SwimNetworkConfig {
     public clearEventFilterType(){
         this.eventTypeFilter.clear()
         this.onEventFilterChange()
+    }
+
+    public setDisseminationApproach(approach: SwimPingApproachType){
+        if(approach !== this.diseminationApproach){
+            this.diseminationApproach = approach
+        }
     }
 
     public setPingApproach(approach: SwimPingApproachType){

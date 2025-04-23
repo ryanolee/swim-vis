@@ -9,7 +9,6 @@ const RANDOM_PEERS_PING_REQ = 3;
 
 export class SwimNode {
     protected knownNodeIds: Set<number> = new Set<number>();
-    protected deadNodeIds: Set<number> = new Set<number>();
     
     // Internal round robin state variables
     protected roundRobinIndex: number = 0;
@@ -20,6 +19,7 @@ export class SwimNode {
     protected incarnationNumber: number = 0;
     protected randomCycleOffset: number = Math.floor(Math.random() * PING_INTERVAL_TICKS);
     protected faulty: boolean = false;
+    protected hasHeardOfOwnDeath: boolean = false;
 
 
     /**
@@ -48,6 +48,22 @@ export class SwimNode {
             return;
         }
         this.knownNodeIds.add(nodeId);
+    }
+
+    public acceptDeathRumor(nodeId: number): void {
+        if (nodeId === this.id) {
+            this.left = true;
+            this.hasHeardOfOwnDeath = true;
+            this.rerender();
+            return;
+        }
+
+        this.knownNodeIds.delete(nodeId);
+        this.clearExpectationsFrom(nodeId);
+    }
+
+    public acceptAliveRumor(nodeId: number): void {
+        this.addKnownNodeId(nodeId);
     }
 
     // top level actions
@@ -346,6 +362,10 @@ export class SwimNode {
 
     public clearAllExpectations(): void {
         this.expectations = [];
+    }
+
+    protected deseminateDeath(): void {
+        this.sn.config.pingApproach
     }
     
 
