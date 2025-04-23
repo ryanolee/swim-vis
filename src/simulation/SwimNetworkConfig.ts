@@ -7,6 +7,8 @@ export const SWIM_PING_APPROACHES = [
     "round_robin"
 ] as const
 export const DEFAULT_PING_APPROACH = "random"
+export type SwimPingApproachType = typeof SWIM_PING_APPROACHES[number]
+
 
 export const SWIM_DISSEMINATION_APPROACHES = [
     "multicast",
@@ -14,19 +16,19 @@ export const SWIM_DISSEMINATION_APPROACHES = [
     "gossip_with_suspicion",
 ] as const
 export const DEFAULT_DISSEMINATION_APPROACH = "multicast"
-
-export type SwimPingApproachType = typeof SWIM_PING_APPROACHES[number]
+export type SwimDisseminationApproachType = typeof SWIM_DISSEMINATION_APPROACHES[number]
 
 
 
 export class SwimNetworkConfig {
     public eventTypeFilter: Set<SwimNodeAction["type"]> = new Set<SwimNodeAction["type"]>([])
-    public pingApproach: SwimPingApproachType = "random"
-    public diseminationApproach: SwimPingApproachType = "random"
+    public pingApproach: SwimPingApproachType = DEFAULT_PING_APPROACH
+    public disseminationApproach: SwimDisseminationApproachType = DEFAULT_DISSEMINATION_APPROACH
 
     public constructor(
         protected onEventFilterChange: () => void = () => {},
-        protected onPingApproachChange: () => void = () => {}
+        protected onPingApproachChange: () => void = () => {},
+        protected onDisseminationApproachChange: () => void = () => {},
     ) {}
 
     public bindNetwork(network: SwimNetwork){
@@ -35,6 +37,12 @@ export class SwimNetworkConfig {
             const node = network.getNode(id)
             node?.clearRoundRobinBuffer()
             node?.clearAllExpectations()
+        })
+
+        this.onDisseminationApproachChange = () => network.getAllNodeIds().forEach((id) => {
+            const node = network.getNode(id)
+            node?.clearAllExpectations()
+            node?.rumorMill.resetBuffers()
         })
     }
 
@@ -53,12 +61,12 @@ export class SwimNetworkConfig {
         this.onEventFilterChange()
     }
 
-    public setDisseminationApproach(approach: SwimPingApproachType){
-        if(approach !== this.diseminationApproach){
-            this.diseminationApproach = approach
+    public setDisseminationApproach(approach: SwimDisseminationApproachType){
+        if(approach !== this.disseminationApproach){
+            this.disseminationApproach = approach
+            this.onDisseminationApproachChange()
         }
     }
-
     public setPingApproach(approach: SwimPingApproachType){
         if(approach !== this.pingApproach){
             this.pingApproach = approach

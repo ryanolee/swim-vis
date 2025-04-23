@@ -1,6 +1,6 @@
+import { SwimRumor } from "@/simulation/SwimRumorMill";
 import { DataSet, Edge } from "vis-network/declarations/entry-standalone";
 import { SwimNetworkConfig } from "./SwimNetworkConfig";
-import { SwimRumor } from "@/simulation/SwimRumorMill";
 
 export const SWIM_NODE_ACTION_TYPES =  ["ping" , "timeout" , "ack" ,  "ping_req",  "join" , "multicast_join" , "multicast_leave" , "multicast_death"] as const
 export type SwimNodeActionType = typeof SWIM_NODE_ACTION_TYPES[number]
@@ -38,6 +38,7 @@ export class SwimNetworkAction {
         public toToCompleteOn: number = 0,
         public payload: Record<string, string|number> = {},
         public options: ActionOptions = {},
+        public piggybackedGossip: SwimRumor[] = [],
     ){}
 
     public isDone(numberOfTicks: number): boolean {
@@ -70,7 +71,9 @@ export class SwimNetworkAction {
             this.removeFromGraph(edges)
     }
 
-   
+    public clearGossip() {
+        this.piggybackedGossip = []
+    }
 
     public addToGraph(edges: DataSet<Edge>){
         if (this.options.render === false) {
@@ -121,7 +124,18 @@ export class SwimNetworkAction {
         if (this.options.actionLost) {
             return `${label} (lost)`;
         }
-        return label;
+
+        if (this.piggybackedGossip.length > 0) {
+            label = `${label} (${this.serializeGossip()})`;
+        }
+        
+        return label ;
+    }
+
+    protected serializeGossip(): string {
+        return this.piggybackedGossip.map((gossip) => {
+            return `${gossip.type.substring(0, 1)}${gossip.subject}`;
+        }).join("");
     }
 
     protected getColor(): string {

@@ -1,11 +1,21 @@
 import { SwimNetwork } from "./SwimNetwork";
 import { SwimNetworkAction, SwimNodeAction } from "./SwimNetworkActions";
 import { SwimNetworkExpectation } from "./SwimNetworkExpectation";
+import { SwimRumor, SwimRumorMill } from "./SwimRumorMill";
 
 const PING_INTERVAL_TICKS = 100;
+const HEED_GOSSIP_INTERVAL = 20;
+
 const TIMEOUT_TICKS = 100;
 const EXPECTATION_CHECK_INTERVAL = 5;
 const RANDOM_PEERS_PING_REQ = 3;
+
+const GOSSIP_RELEVANT_ACTION_TYPES = [
+    "ping",
+    "ack",
+    "ping_req",
+]
+
 
 export class SwimNode {
     protected knownNodeIds: Set<number> = new Set<number>();
@@ -23,9 +33,17 @@ export class SwimNode {
 
 
     /**
+     * Flag to indicate if the node is disabled. This is used to prevent the node from sending or receiving actions.
+     */
+    protected disabled: boolean = false;
+
+
+    /**
      * Marks a node as having permanently left the network voluntarily.
      */
     protected left: boolean = false;
+
+    public rumorMill: SwimRumorMill = new SwimRumorMill();
     
     constructor (
         public readonly id: number,
@@ -35,9 +53,16 @@ export class SwimNode {
     
     // Setters 
     public setFaulty(faulty: boolean): void {
+        if (this.left || this.hasHeardOfOwnDeath) {
+            console.warn("Cannot set faulty state on a node that has left the network or has heard of its own death.");
+            return;
+        }
+
+        this.disabled = faulty;
         this.faulty = faulty;
         this.rerender();
     }
+
     public clearRoundRobinBuffer(): void {
         this.roundRobinBuffer = [];
         this.roundRobinIndex = 0;
@@ -50,22 +75,6 @@ export class SwimNode {
         this.knownNodeIds.add(nodeId);
     }
 
-    public acceptDeathRumor(nodeId: number): void {
-        if (nodeId === this.id) {
-            this.left = true;
-            this.hasHeardOfOwnDeath = true;
-            this.rerender();
-            return;
-        }
-
-        this.knownNodeIds.delete(nodeId);
-        this.clearExpectationsFrom(nodeId);
-    }
-
-    public acceptAliveRumor(nodeId: number): void {
-        this.addKnownNodeId(nodeId);
-    }
-
     // top level actions
     public leaveNetwork(): void {
         if (this.left) {
@@ -73,13 +82,16 @@ export class SwimNode {
         }
 
         this.left = true;
+        this.disabled = true;
         this.expectations = []
         this.rerender()
 
-        this.multicastDispatch({
-            type: "multicast_leave",
-            from: this.id,
-        })
+        if (this.sn.config.disseminationApproach === "multicast") {
+            this.multicastDispatch({
+                type: "multicast_leave",
+                from: this.id,
+            })
+        }
     }
 
     public joinNetwork(nodeId: number): void {
@@ -96,7 +108,7 @@ export class SwimNode {
 
     // Top level API
     public tick(currentTick: number): void {
-        if (this.faulty || this.left) {
+        if (this.disabled) {
             return;
         }
 
@@ -111,6 +123,10 @@ export class SwimNode {
                     this.expectations = this.expectations.filter(e => e !== expectation);
                 }
             }
+        }
+
+        if ((currentTick +this.randomCycleOffset) % HEED_GOSSIP_INTERVAL === 0) {
+            this.rumorMill.heedRumors(this);
         }
     }
 
@@ -132,14 +148,19 @@ export class SwimNode {
             return;
         }
 
+        this.rumorMill.listenToGossip(action);
+
         switch (action.type) {
             case "ping":
+                this.disseminateAlive(action.from);
                 this.handlePing(action);
                 break;
             case "ack":
+                this.disseminateAlive(action.from);
                 this.handleAck(action);
                 break;
             case "ping_req":
+                this.disseminateAlive(action.from);
                 this.handlePingReq(action)
                 break;
             case "join":
@@ -178,10 +199,6 @@ export class SwimNode {
     
     // Action Receivers
     protected handlePing(action: SwimNetworkAction): void {
-        // If we get a ping from a node we don't know about, add it to our known nodes
-        this.addKnownNodeId(action.from);
-        
-
         // Handle replying ack ping_req back to original node
         if(typeof action.payload.originalFrom === "number" ) {
             this.sn.dispatchAction({
@@ -204,7 +221,6 @@ export class SwimNode {
     }
 
     protected handleAck(action: SwimNetworkAction): void {
-        
         // Handle replying ack back to original node on a ping_req
         if(typeof action.payload.for === "number"){
             // Clear expectation that node might need to die
@@ -258,14 +274,7 @@ export class SwimNode {
     }
 
     protected handleInitialJoin(action: SwimNetworkAction): void {
-        this.addKnownNodeId(action.from);
-        this.multicastDispatch({
-            type: "multicast_join",
-            payload: {
-                subject: action.payload.subject,
-            },
-            from: this.id,
-        });
+        this.disseminateJoin(action.from);
     }
 
     protected handleMulticastLeave(action: SwimNetworkAction): void {
@@ -276,15 +285,9 @@ export class SwimNode {
      /**
      * Called in the event both an  ping and a ping_req yield no ack
      */
-     protected handleBrokenReceiveAckOrDeath(expectation: SwimNetworkExpectation): void {
-        this.markNodeAsDead(expectation.from);
-        this.multicastDispatch({
-            type: "multicast_death",
-            from: this.id,
-            payload: {
-                subject: expectation.from,
-            }
-        })
+    protected handleBrokenReceiveAckOrDeath(expectation: SwimNetworkExpectation): void {
+        console.info(`Node ${this.id} thinks node ${expectation.from} is dead. Spreading death rumor.`);
+        this.disseminateDeath(expectation.from);    
     }
     
     // Senders
@@ -364,10 +367,116 @@ export class SwimNode {
         this.expectations = [];
     }
 
-    protected deseminateDeath(): void {
-        this.sn.config.pingApproach
+    protected disseminateAlive(target: number): void {
+        this.addKnownNodeId(target);
+        switch (this.sn.config.disseminationApproach) {
+            case "multicast":
+                // Noop
+                break;
+            case "gossip":
+                this.rumorMill.addRumor({
+                    subject: target,
+                    type: "alive",
+                    originator: this.id,
+                    incarnationNumber: this.incarnationNumber,
+                });
+                break;
+            default:
+                console.warn("Unknown dissemination approach", this.sn.config.disseminationApproach);
+        }
     }
-    
+
+    protected disseminateJoin(target: number): void {
+        this.addKnownNodeId(target);
+        switch (this.sn.config.disseminationApproach) {
+            case "multicast":
+                this.multicastDispatch({
+                    type: "multicast_join",
+                    from: this.id,
+                    payload: {
+                        subject: target,
+                    }
+                })
+                break;
+            case "gossip":
+                this.rumorMill.addRumor({
+                    subject: target,
+                    type: "alive",
+                    originator: this.id,
+                    incarnationNumber: this.incarnationNumber,
+                });
+                break;
+            default:
+                console.warn("Unknown dissemination approach", this.sn.config.disseminationApproach);
+        }
+    }
+
+    protected disseminateDeath(target: number): void {
+        this.markNodeAsDead(target);
+        switch (this.sn.config.disseminationApproach) {
+            case "multicast":
+                this.multicastDispatch({
+                    type: "multicast_death",
+                    from: this.id,
+                    payload: {
+                        subject: target,
+                    }
+                })
+                break;
+            case "gossip":
+                this.rumorMill.addRumor({
+                    subject: target,
+                    type: "dead",
+                    originator: this.id,
+                    incarnationNumber: this.incarnationNumber,
+                });
+                break;
+            default:
+                console.warn("Unknown dissemination approach", this.sn.config.disseminationApproach);
+            }
+    }
+
+    // Rumor handlers
+    public handleRumor(rumor: SwimRumor): void {
+        if (this.faulty) {
+            return;
+        }
+
+        switch (rumor.type) {
+            case "alive":
+                this.acceptAliveRumor(rumor.subject);
+                break;
+            case "dead":
+                this.acceptDeathRumor(rumor.subject);
+                break;
+            default:
+                console.warn("Unknown rumor type", rumor.type);
+        }
+    }
+
+    public injectGossip(action: SwimNetworkAction): void {
+        if (this.sn.config.disseminationApproach === "multicast" || !GOSSIP_RELEVANT_ACTION_TYPES.includes(action.type)) {
+            return;
+        }
+
+        this.rumorMill.spreadGossip(action)
+    }
+
+    protected acceptDeathRumor(nodeId: number): void {
+        if (nodeId === this.id) {
+            this.disabled = true;
+            this.hasHeardOfOwnDeath = true;
+            this.rerender();
+            return;
+        }
+
+        this.knownNodeIds.delete(nodeId);
+        this.clearExpectationsFrom(nodeId);
+    }
+
+    protected acceptAliveRumor(nodeId: number): void {
+        this.addKnownNodeId(nodeId);
+    }
 
     /**
      * Dispatch an action to all peers in the network, except for the sender.
@@ -383,6 +492,12 @@ export class SwimNode {
             }
         }
     }
+
+    // Public getters
+    public isDisabled(): boolean {
+        return this.disabled;
+    }
+    
 
     // Internal peer getters
     protected getNRandomPeers(n: number): number[] {
@@ -438,7 +553,7 @@ export class SwimNode {
 
     // Internal render helpers
     protected getColor(): string {
-        if (this.left) {
+        if (this.left || this.hasHeardOfOwnDeath) {
             return "#e5e5e5";
         } 
 
@@ -450,6 +565,10 @@ export class SwimNode {
     }
 
     protected getLabel(): string {
+        if (this.hasHeardOfOwnDeath) {
+            return `${this.label} (irrefutably declared as dead)`;
+        }
+
         if (this.left) {
             return `${this.label} (left)`;
         }

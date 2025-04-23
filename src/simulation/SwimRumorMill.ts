@@ -1,8 +1,8 @@
 import { SwimNodeAction } from "@/simulation/SwimNetworkActions"
 import { SwimNode } from "./SwimNode"
 
-const GOSSIP_PER_ACTION = 4
-const GOSSIP_BUFFER_SIZE = 20
+const MAX_GOSSIP_PER_ACTION = 4
+const GOSSIP_BUFFER_SIZE = 30
 
 // Should be n log(x)
 // where x is the number of nodes in the network
@@ -10,15 +10,24 @@ const GOSSIP_BUFFER_SIZE = 20
 const MAXIMUM_SHARES = 4
 
 
+const RUMOR_TYPES = [
+    "alive",
+    "dead"
+] as const
+
+export type SwimRumorType = typeof RUMOR_TYPES[number]
+
 export type SwimRumor = {
     subject: number
     incarnationNumber: number
-    relevantNode: number
-    type: "alive" | "dead"
+    originator: number
+    type: SwimRumorType
 }
 
 type KnownSwimRumor = {
     rumor: SwimRumor
+    // If the rumor has been acted on by the node
+    heeded: boolean
     numberOfTimesGossiped: number
 }
 
@@ -42,6 +51,7 @@ class SwimRumorBuffer {
         this.knownRumors.add(rumor.subject)
         this.buffer.push({
             rumor,
+            heeded: false,
             numberOfTimesGossiped: 0
         })
         
@@ -52,16 +62,51 @@ class SwimRumorBuffer {
         }
     }
 
+    /**
+     * Two pass process to get the most even distribution of gossip types
+     * 1. Attempt to get an even distribution of gossip types with the least number of shares
+     * 2. If we don't have enough gossip take the least shared rumors
+     */
     public talkAboutNRumors(n: number) {
-        // Increment shared gossip by reference
-        for(let i = 0; i < n; i++){
-            if (this.buffer[i]) {
+        const targetThreshold = Math.floor(n / RUMOR_TYPES.length)
+        const numberOfTypesObtained = RUMOR_TYPES.reduce((acc, type) => {
+            acc[type] = 0
+            return acc
+        }, {} as Record<SwimRumorType, number>)
+        const gossipToShare: SwimRumor[] = []
+
+        // Pass 1: Attempt to get even distribution of gossip types to share
+        for(let i = 0; i < this.buffer.length; i++) {
+            const item = this.buffer[i]
+            if (numberOfTypesObtained[item.rumor.type] <= targetThreshold) {
+                numberOfTypesObtained[item.rumor.type]++
+                gossipToShare.push(item.rumor)
+
+                // Increment original reference to the rumor
                 this.buffer[i].numberOfTimesGossiped++
+            }
+
+            if (gossipToShare.length >= n) {
+                break
+            }
+        }
+
+        // Pass 2: If we don't have enough gossip, just take the rest of the buffer
+        if(gossipToShare.length < n) {
+            for(let i = 0; i < this.buffer.length; i++) {
+                const item = this.buffer[i]
+                if (!gossipToShare.includes(item.rumor)) {
+                    gossipToShare.push(item.rumor)
+                    this.buffer[i].numberOfTimesGossiped++
+                }
+
+                if (gossipToShare.length >= n) {
+                    break
+                }
             }
         }
         
         // Take the gossip to share and reorder the rest
-        const gossipToShare = this.buffer.slice(0, n).map(r => r.rumor)
         this.evictOldRumors()
         this.resortBuffer()
 
@@ -72,12 +117,30 @@ class SwimRumorBuffer {
         return this.buffer.map(r => r.rumor)
     }
 
+    public peekAtUnheededRumors() {
+        return this.buffer.filter(r => !r.heeded).map(r => r.rumor)
+    }
+
+    public heedAllRumors() {
+        this.buffer.forEach((r) => {
+            r.heeded = true
+        })
+    }
+    
+
     public forgetAboutRumorsRelatingTo(id: number) {
         // Remove all rumors relating to the id
         if(!this.knownRumors.has(id)) {
             this.knownRumors.delete(id)
             this.buffer = this.buffer.filter((r) => r.rumor.subject !== id)
         }
+    }
+
+    public asMap() {
+        return this.buffer.reduce((acc, rumor) => {
+            acc.set(rumor.rumor.subject, rumor.rumor)
+            return acc
+        }, new Map<number, SwimRumor>())
     }
 
     protected evictOldRumors() {
@@ -112,8 +175,7 @@ class SwimRumorBuffer {
  * The Swim rumor mill contains 
  */
 export class SwimRumorMill {
-    public aliveRumors: SwimRumorBuffer = new SwimRumorBuffer(GOSSIP_BUFFER_SIZE)
-    public deadRumors: SwimRumorBuffer = new SwimRumorBuffer(GOSSIP_BUFFER_SIZE)
+    public rumors: SwimRumorBuffer = new SwimRumorBuffer(GOSSIP_BUFFER_SIZE)
 
     public constructor () {}
     
@@ -121,39 +183,71 @@ export class SwimRumorMill {
      * Listens to and takes onboa
      */
     public listenToGossip(action: SwimNodeAction) {
+        if (!action.piggybackedGossip) {
+            return
+        }
 
-        action.piggybackedGossip?.forEach((rumor) => {
-            rumor.type === "alive" ?
-                this.aliveRumors.addRumor(rumor):
-                this.deadRumors.addRumor(rumor)
-        })
+        this.consumeRumors(action.piggybackedGossip)
     }
 
-    protected forgetAboutRumorsRelatingTo(id: number){
-        this.aliveRumors.forgetAboutRumorsRelatingTo(id)
-        this.deadRumors.forgetAboutRumorsRelatingTo(id)
+    /**
+     * Accepts a rumor and adds it to the rumor mill
+     */
+    public addRumor(rumor: SwimRumor) {
+        this.consumeRumors([
+            rumor
+        ])
     }
 
+    /**
+     * Consume all unheeded rumors and pass them back to the node to handle
+     */
     public heedRumors(node: SwimNode) {
-        this.getHottestGossip().forEach((rumor) => {
-           rumor.type === "alive" ?
-                node.acceptAliveRumor(rumor.subject) :
-                node.acceptDeathRumor(rumor.subject)
+        const unheededRumors = this.rumors.peekAtUnheededRumors()
+
+        if (unheededRumors.length === 0) {
+            return
+        }
+
+        this.rumors.heedAllRumors()
+        unheededRumors.forEach((rumor) => {
+            node.handleRumor(rumor)
         })
+    }
+
+    /**
+     * Clears out all rumors from the rumor mill.
+     */
+    public resetBuffers() {
+        this.rumors = new SwimRumorBuffer(GOSSIP_BUFFER_SIZE)
     }
 
     /**
      * Injects the most relevant rumors into the action to be sent.
      */
     public spreadGossip(action: SwimNodeAction) {
-        action.piggybackedGossip = [
-            ...this.aliveRumors.talkAboutNRumors(
-                Math.floor(GOSSIP_PER_ACTION / 2)
-            ),
-            ...this.deadRumors.talkAboutNRumors(
-                Math.floor(GOSSIP_PER_ACTION / 2)
-            )
-        ]
+        action.piggybackedGossip = 
+            this.rumors.talkAboutNRumors(MAX_GOSSIP_PER_ACTION)
+        
+    }
+
+    protected consumeRumors(rumors: SwimRumor[]) {
+        this.filterIrrelevantRumors(rumors).forEach((rumor) => {
+            this.forgetAboutRumorsRelatingTo(rumor.subject)
+            this.rumors.addRumor(rumor)
+        })
+    }
+
+    protected filterIrrelevantRumors(rumors: SwimRumor[]): SwimRumor[] {
+        const gossipMap = this.rumors.asMap()
+        return rumors.filter((rumor) => 
+            !gossipMap.has(rumor.subject) || 
+            this.getTheHotterGossip(gossipMap.get(rumor.subject) as SwimRumor, rumor) === rumor
+        )
+    }
+
+    private forgetAboutRumorsRelatingTo(id: number){
+        this.rumors.forgetAboutRumorsRelatingTo(id)
     }
 
     protected getTheHotterGossip(rumor1: SwimRumor, rumor2: SwimRumor): SwimRumor {
@@ -177,27 +271,4 @@ export class SwimRumorMill {
         return rumor1
         
     }
-
-    /**
-     * Fetches most relevant rumors available to the node
-     */
-    protected getHottestGossip(): Map<number, SwimRumor>{
-        const rumors = [...this.aliveRumors.peekAtRumors(), ...this.deadRumors.peekAtRumors()]
-        const hottestGossMap = new Map<number, SwimRumor>()
-        for(const rumor of rumors) {
-           if(!hottestGossMap.has(rumor.subject)){
-
-                // If there is already a rumor for this subject, check if the new rumor is "hotter"
-                hottestGossMap.set(rumor.subject, rumor)
-                continue;
-            }
-
-            const existingRumor = hottestGossMap.get(rumor.subject) as SwimRumor
-            if (this.getTheHotterGossip(existingRumor, rumor) === rumor){
-                hottestGossMap.set(rumor.subject, rumor)
-            }
-        }
-
-        return hottestGossMap
-    }         
 }

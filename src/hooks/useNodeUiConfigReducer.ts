@@ -1,6 +1,6 @@
 import { useSwimNetworkContext } from "@/contexts/SwimNetworkContext";
 import { SwimNodeActionType } from "@/simulation/SwimNetworkActions";
-import { SwimPingApproachType } from "@/simulation/SwimNetworkConfig";
+import { DEFAULT_DISSEMINATION_APPROACH, DEFAULT_PING_APPROACH, SwimDisseminationApproachType, SwimPingApproachType } from "@/simulation/SwimNetworkConfig";
 import { useCallback, useReducer } from "react";
 
 export type UiConfigAction = {
@@ -9,11 +9,15 @@ export type UiConfigAction = {
 } | {
     type: "set_ping_approach",
     pingApproach: SwimPingApproachType
+} | {
+    type: "set_dissemination_approach",
+    disseminationApproach: SwimDisseminationApproachType
 }
 
 export type UIConfigState = {
     actionTypeFilters: SwimNodeActionType[]
     pingApproach: SwimPingApproachType
+    disseminationApproach: SwimDisseminationApproachType
 }
 
 export const useNodeUiConfigReducer = () => {
@@ -40,10 +44,16 @@ export const useNodeUiConfigReducer = () => {
           ...state,
           pingApproach: action.pingApproach
         }
+      case "set_dissemination_approach":
+        swimNetwork.config.setDisseminationApproach(action.disseminationApproach)
+        return {
+          ...state,
+          disseminationApproach: action.disseminationApproach
+        }
       default:
         return state
     }   
   }, [swimNetwork]);
 
-  return useReducer(reducer, {actionTypeFilters: [], pingApproach: "random"});
+  return useReducer(reducer, {actionTypeFilters: [], pingApproach: DEFAULT_PING_APPROACH, disseminationApproach: DEFAULT_DISSEMINATION_APPROACH} as UIConfigState);
 }

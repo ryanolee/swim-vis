@@ -37,7 +37,7 @@ export class SwimNetwork {
         }
 
         // Get a random peer to register with before adding another node
-        const randomPeer = this.getRandomNode();
+        const randomPeer = this.getRandomNoneDeadNode();
 
         // Register with simulation
         const node = new SwimNode(id, `Node id ${id}`, this);
@@ -105,6 +105,9 @@ export class SwimNetwork {
             action.payload,
         );
 
+        // Inject gossip into the node that is sending the action
+        this.getNode(action.from)?.injectGossip(networkAction);
+
         // Mark the action as lost if it intersects with any partition
         if(this.actionIntersectsWithAnyPartition(networkAction)) {
             networkAction.options.actionLost = true;
@@ -147,13 +150,14 @@ export class SwimNetwork {
         }
     }
 
-    protected getRandomNode(): SwimNode | null {
-        const nodeIds = Object.keys(this.nodes);
-        if (nodeIds.length === 0) {
+    protected getRandomNoneDeadNode(): SwimNode | null {
+        const candidateNodes = Object.values(this.nodes).filter(node => !node.isDisabled());
+
+        if (candidateNodes.length === 0) {
             return null;
         }
-        const randomId = nodeIds[Math.floor(Math.random() * nodeIds.length)];
-        return this.nodes[parseInt(randomId)];
+        const randomIndex = Math.floor(Math.random() * candidateNodes.length);
+        return candidateNodes[randomIndex];
     }
 
     /**

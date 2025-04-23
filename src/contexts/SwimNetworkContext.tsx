@@ -10,6 +10,7 @@ export const SwimNetworkProvider: React.FC<{
 }> = ({ children }) => {
   const graphContext = useGraphContext();
   const swimNetwork = useMemo(() => new SwimNetwork(graphContext.graph, graphContext.data, new SwimNetworkConfig()), [graphContext]);
+  
   return (
     <SwimNetworkContext.Provider value={swimNetwork}>
       {children}
