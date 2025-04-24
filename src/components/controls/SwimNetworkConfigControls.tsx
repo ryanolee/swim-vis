@@ -1,7 +1,9 @@
 import { useNodeUiConfigReducer } from "@/hooks/useNodeUiConfigReducer"
 import { SWIM_NODE_ACTION_TYPES } from "@/simulation/SwimNetworkActions"
-import { SWIM_DISSEMINATION_APPROACHES, SWIM_OVERLAY_MODES, SWIM_PING_APPROACHES } from "@/simulation/SwimNetworkConfig"
+import { DEFAULT_PACKET_LOSS, DEFAULT_SPEED, SWIM_DISSEMINATION_APPROACHES, SWIM_OVERLAY_MODES, SWIM_PING_APPROACHES } from "@/simulation/SwimNetworkConfig"
 import { SwimConfigSelector } from "./inputs/SwimConfigSelector"
+import { Slider } from "@material-tailwind/react";
+import { SwimSlider } from "@/components/controls/inputs/SwimSlider";
 
 export const SwimNetworkConfigControls: React.FC = () => {
     const [config, dispatch] = useNodeUiConfigReducer()
@@ -63,6 +65,29 @@ export const SwimNetworkConfigControls: React.FC = () => {
             defaultValue={config.overlayMode}
             label="Overlay Mode"
             description="Select the overlay mode to use in the network."
+        />
+        <h3 className="text-md font-semibold mb-2">Network speed</h3>
+        <SwimSlider
+            min={0.1}
+            max={10}
+            step={0.1}
+            initialValue={DEFAULT_SPEED}
+            onChange={(value: number) => {dispatch({
+                type: "set_simulation_speed",
+                simulationSpeed: value
+            })}}
+            description="Set the network simulation speed"
+        />
+        <SwimSlider
+            min={0}
+            max={1}
+            step={0.01}
+            initialValue={DEFAULT_PACKET_LOSS}
+            onChange={(value: number) => {dispatch({
+                type: "set_packet_loss",
+                packetLoss: value
+            })}}
+            description="Set the number of packets randomly lost on the network"
         />
     </>
 }

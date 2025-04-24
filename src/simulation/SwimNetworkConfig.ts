@@ -28,12 +28,17 @@ export type SwimOverlayModeType = typeof SWIM_OVERLAY_MODES[number]
 
 export const DEFAULT_OVERLAY_MODE: SwimOverlayModeType = "none"
 
+export const DEFAULT_SPEED = 1
+export const DEFAULT_PACKET_LOSS = 0.05
+
 
 export class SwimNetworkConfig {
     public eventTypeFilter: Set<SwimNodeAction["type"]> = new Set<SwimNodeAction["type"]>([])
     public pingApproach: SwimPingApproachType = DEFAULT_PING_APPROACH
     public disseminationApproach: SwimDisseminationApproachType = DEFAULT_DISSEMINATION_APPROACH
     public overlayMode: SwimOverlayModeType = DEFAULT_OVERLAY_MODE
+    public simulationSpeed: number = DEFAULT_SPEED
+    public packetLoss: number = DEFAULT_PACKET_LOSS
     public selectedNodeId: number | null = null
     public enablePhysics: boolean = true
 
@@ -43,6 +48,8 @@ export class SwimNetworkConfig {
         protected onDisseminationApproachChange: () => void = () => {},
         protected onOverlayModeChange: () => void = () => {},
         protected onEnablePhysicsChange: () => void = () => {},
+        protected onSimulationSpeedChange: () => void = () => {},
+        protected onPacketLossChange: () => void = () => {},
     ) {}
 
     public bindNetwork(network: SwimNetwork){
@@ -73,6 +80,10 @@ export class SwimNetworkConfig {
                 const node = network.getNode(id)
                 node?.rerender()
             })
+        }
+
+        this.onSimulationSpeedChange = () => {
+            network.updateSimSpeed(this.simulationSpeed)
         }
         
         this.onEnablePhysicsChange = () => {
@@ -133,6 +144,20 @@ export class SwimNetworkConfig {
         if(enable !== this.enablePhysics){
             this.enablePhysics = enable
             this.onEnablePhysicsChange()
+        }
+    }
+
+    public setSimulationSpeed(speed: number){
+        if(speed !== this.simulationSpeed){
+            this.simulationSpeed = speed
+            this.onSimulationSpeedChange()
+        }
+    }
+
+    public setPacketLoss(loss: number){
+        if(loss !== this.packetLoss){
+            this.packetLoss = loss
+            this.onPacketLossChange()
         }
     }
 }

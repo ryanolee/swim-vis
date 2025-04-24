@@ -12,6 +12,9 @@ const MAXIMUM_NUMBER_OF_RENDERED_ACTIONS = 300;
 const FAILSAFE_RENDER_INTERVAL = NETWORK_TICK_LATENCY
 const PACKET_LOSS_CHANCE: number|null = null
 
+const DEFAULT_SPEED_BASE = 1000 / 30
+ 
+
 /**
  * Top level simulation class that manages the network and all nodes in it
  */
@@ -19,7 +22,7 @@ export class SwimNetwork {
     private nodes: Record<number, SwimNode> = {};
     private partitions: Record<number, SwimNetworkPartition> = {};
     private ongoingActions: SwimNetworkAction[] = [];
-    private tickerInterval: NodeJS.Timer | null = null;
+    private tickerInterval: number | null = null;
     private physicsDisabledDueToTooManyActions: boolean = false;
 
     private currentTick: number = 0;
@@ -36,7 +39,7 @@ export class SwimNetwork {
         public config: SwimNetworkConfig
     ) {
         this.placement = new SwimNodePlacement(this);
-        this.tickerInterval = setInterval(() => this.tick(), 1000/20); // 60 FPS
+        this.tickerInterval = setInterval(() => this.tick(), 1000/DEFAULT_SPEED_BASE) as unknown as number; // 60 FPS
         // Bind network to ongoing config changes
         this.config.bindNetwork(this)
     }
@@ -138,7 +141,15 @@ export class SwimNetwork {
     }
 
     protected randomlyDropAction(){
-        return PACKET_LOSS_CHANCE !== null && PACKET_LOSS_CHANCE > Math.random()
+        // Don't generate a random number on no packet loss
+        if(
+            this.config.packetLoss == null ||
+            this.config.packetLoss == 0
+        ) {
+            return false
+        }
+
+        return this.config.packetLoss > Math.random()
     }
 
     /**
@@ -232,5 +243,13 @@ export class SwimNetwork {
             console.warn(`Failsafe render triggered due to too many actions (currentCount: ${this.ongoingActions.length} > ${MAXIMUM_NUMBER_OF_RENDERED_ACTIONS})`)
             this.rerenderNodes()
         }
+    }
+
+    public updateSimSpeed(speed: number){
+        if(this.tickerInterval !== null){
+            clearInterval(this.tickerInterval)
+        }
+
+        this.tickerInterval = setInterval(() => this.tick(), DEFAULT_SPEED_BASE / speed) as unknown as number
     }
 }
