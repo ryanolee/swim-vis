@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:ci": "vite build --base=/swim-vis/",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "jest"
