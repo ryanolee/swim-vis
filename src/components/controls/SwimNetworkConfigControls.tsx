@@ -2,7 +2,6 @@ import { useNodeUiConfigReducer } from "@/hooks/useNodeUiConfigReducer"
 import { SWIM_NODE_ACTION_TYPES } from "@/simulation/SwimNetworkActions"
 import { DEFAULT_PACKET_LOSS, DEFAULT_SPEED, SWIM_DISSEMINATION_APPROACHES, SWIM_OVERLAY_MODES, SWIM_PING_APPROACHES } from "@/simulation/SwimNetworkConfig"
 import { SwimConfigSelector } from "./inputs/SwimConfigSelector"
-import { Slider } from "@material-tailwind/react";
 import { SwimSlider } from "@/components/controls/inputs/SwimSlider";
 
 export const SwimNetworkConfigControls: React.FC = () => {
@@ -64,7 +63,7 @@ export const SwimNetworkConfigControls: React.FC = () => {
             }}
             defaultValue={config.overlayMode}
             label="Overlay Mode"
-            description="Select the overlay mode to use in the network."
+            description="Set what information should be shown when a node is selected."
         />
         <h3 className="text-md font-semibold mb-2">Network speed</h3>
         <SwimSlider
@@ -76,7 +75,7 @@ export const SwimNetworkConfigControls: React.FC = () => {
                 type: "set_simulation_speed",
                 simulationSpeed: value
             })}}
-            description="Set the network simulation speed"
+            description="Set the network simulation speed."
         />
         <SwimSlider
             min={0}
