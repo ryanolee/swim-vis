@@ -7,6 +7,7 @@ const GOSSIP_BUFFER_SIZE = 30
 
 export const RUMOR_TYPES = [
     "alive",
+    "suspect",
     "dead"
 ] as const
 
@@ -111,6 +112,25 @@ export class SwimRumorMill {
     // True if the first rumor is hotter than the second
     // False if the second rumor is hotter than the first
     protected getTheHotterGossip(rumor1: SwimRumor, rumor2: SwimRumor): boolean {
+
+        // If the rumors are the same keep the original one
+        if (
+            rumor1.incarnationNumber === rumor2.incarnationNumber &&
+            rumor1.type === rumor2.type
+        ) {
+            return false
+        }
+        
+        // Dead (confirm) ALWAY wins all else
+        if (rumor1.type === "dead"){
+            return true
+        }
+
+        if (rumor2.type === "dead"){
+            return false
+        }
+
+        // Accept the rumor if has a higher incarnation number 
         if (rumor1.incarnationNumber > rumor2.incarnationNumber) {
             return true
         } 
@@ -119,14 +139,18 @@ export class SwimRumorMill {
             return false
         }
 
-        // Dead wins over alive
-        if (rumor1.type === "dead"){
+        // When the incarnation numbers are the same
+        // prefer suspect over alive
+        // if the node want's to refute the rumor it can do so
+        if(rumor1.type === "suspect" && rumor2.type === "alive"){
             return true
         }
 
-        if (rumor2.type === "dead"){
+        if(rumor2.type === "suspect" && rumor1.type === "alive"){
             return false
         }
+
+
 
         return true
         

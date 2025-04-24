@@ -151,9 +151,15 @@ export class SwimNetworkAction {
                 return "#808080";
             }
 
-            return relevantGossip.type === "dead" ?
-                "#FF0000" :
-                "#00FF00";
+            if (relevantGossip.type === "alive") {
+                return "#00FF00";
+            } 
+            
+            if (relevantGossip.type === "suspect") {
+                return "#FF4500";
+            }
+
+            return "#FF0000";
         }
 
         if (this.options.actionLost) {

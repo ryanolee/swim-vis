@@ -4,7 +4,7 @@
  */
 export class SwimNetworkExpectation{
     constructor (
-        public expectationType: "receive_ack" | "receive_ack_or_death" = "receive_ack",
+        public expectationType: "receive_ack" | "receive_ack_or_death" | "clear_suspicion" = "receive_ack",
         public from: number,
         public expectationBrokenTime: number = 0,
     ){}

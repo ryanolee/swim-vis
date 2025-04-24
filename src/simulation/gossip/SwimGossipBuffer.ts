@@ -8,7 +8,7 @@ import { RUMOR_TYPES, SwimRumor, SwimRumorType } from "./SwimRumorMill"
 const GOSSIP_BIAS: Record<SwimRumorType, number> = {
     "alive": 1,
     "dead": 1,
-    
+    "suspect": 1,
 }
 
 type KnownSwimRumor = {
