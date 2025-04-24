@@ -26,8 +26,6 @@ describe('SwimRumorMill', () => {
         
         const action = createAction(3, 4);
         rumorMill.spreadGossip(action);
-
-        console.log("Action: ", JSON.stringify(action.piggybackedGossip));
         
         expect(action.piggybackedGossip).toContainEqual(deadRumor);
     });
