@@ -7,7 +7,7 @@ const PING_INTERVAL_TICKS = 100;
 
 
 const TIMEOUT_TICKS = 100;
-const TIMEOUT_SUSPECT_TICKS = 500;
+const TIMEOUT_SUSPECT_TICKS = 10000;
 const EXPECTATION_CHECK_INTERVAL = 5;
 const RANDOM_PEERS_PING_REQ = 3;
 
@@ -157,16 +157,15 @@ export class SwimNode {
 
         switch (action.type) {
             case "ping":
-                this.disseminateAlive(action.from);
+                this.disseminateAlive(action.from)
                 this.handlePing(action);
                 break;
-            case "ack":
-                this.disseminateAlive(action.from);
-                this.handleAck(action);
-                break;
             case "ping_req":
-                this.disseminateAlive(action.from);
+                this.disseminateAlive(action.from)
                 this.handlePingReq(action)
+                break;
+            case "ack":
+                this.handleAck(action);
                 break;
             case "join":
                 this.handleInitialJoin(action);
@@ -204,8 +203,7 @@ export class SwimNode {
                 console.warn("Unknown expectation type", expectation.expectationType);
         }
     }
-    
-    // Action Receivers
+
     protected handlePing(action: SwimNetworkAction): void {
         // Handle replying ack ping_req back to original node
         if(typeof action.payload.originalFrom === "number" ) {
@@ -396,14 +394,20 @@ export class SwimNode {
                 break;
             case "gossip":
             case "gossip_with_suspicion":
-                this.rumorMill.addRumor({
-                    subject: target,
-                    type: "alive",
-                    originator: this.id,
-                    incarnationNumber: incarnationNumber !== null ?
-                        incarnationNumber :
-                        this.getIncarnationNumberForNode(target),
-                });
+                if(!this.rumorMill.isNodeThoughtToBeDead(target)) {
+                    this.addKnownNodeId(target)
+                }
+                    
+
+                // Only disseminate the alive rumor if the 
+                if(incarnationNumber !== null) {
+                    this.rumorMill.addRumor({
+                        subject: target,
+                        type: "alive",
+                        originator: this.id,
+                        incarnationNumber: incarnationNumber,
+                    });
+                }
 
                 // Listen to rumors
                 this.rumorMill.heedRumors(this);
@@ -538,7 +542,9 @@ export class SwimNode {
             return;
         }
 
+        // Mark node as accepted but also be somewhat suspicious of it
         this.suspectedNodeIds.add(nodeId);
+        this.addKnownNodeId(nodeId)
     }
 
     protected acceptDeathRumor(nodeId: number): void {
@@ -589,6 +595,10 @@ export class SwimNode {
 
     public hasLeft(): boolean {
         return this.left;
+    }
+
+    public isKnown(peerId: number): boolean{
+        return this.knownNodeIds.has(peerId)
     }
 
 
@@ -654,6 +664,13 @@ export class SwimNode {
            return this.getColorForWhoKnowsWho()
         }
 
+        if (
+            this.sn.config.overlayMode === "who_do_i_know" &&
+            this.sn.config.selectedNodeId !== null
+        ) {
+            return this.getColorForWhoIKnow()
+        }
+
         // Default rendering approach
         if (this.left || this.hasHeardOfOwnDeath) {
             return "#e5e5e5";
@@ -681,6 +698,16 @@ export class SwimNode {
         }
 
         return "#e5e5e5"
+    }
+
+    protected getColorForWhoIKnow(): string {
+        const selectedNode = this.sn.getNode(this.sn.config.selectedNodeId ?? -1);
+
+        if (selectedNode?.id === this.id ) {
+            return "#add8e6";
+        }
+
+        return (selectedNode?.isKnown(this.id) ?? false) ? "#90EE90" : "#e5e5e5"
     }
 
     

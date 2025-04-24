@@ -20,7 +20,8 @@ export type SwimDisseminationApproachType = typeof SWIM_DISSEMINATION_APPROACHES
 
 export const SWIM_OVERLAY_MODES = [
     "none",
-    "who_knows_who"
+    "who_knows_who",
+    "who_do_i_know"
 ] as const
 
 export type SwimOverlayModeType = typeof SWIM_OVERLAY_MODES[number]

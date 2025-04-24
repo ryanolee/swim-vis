@@ -10,6 +10,8 @@ const NETWORK_TICK_LATENCY = 30;
 const MAXIMUM_NUMBER_OF_RENDERED_ACTIONS_WITH_PHYSICS = 100;
 const MAXIMUM_NUMBER_OF_RENDERED_ACTIONS = 300;
 const FAILSAFE_RENDER_INTERVAL = NETWORK_TICK_LATENCY
+const PACKET_LOSS_CHANCE: number|null = 0.5
+
 /**
  * Top level simulation class that manages the network and all nodes in it
  */
@@ -34,7 +36,7 @@ export class SwimNetwork {
         public config: SwimNetworkConfig
     ) {
         this.placement = new SwimNodePlacement(this);
-        this.tickerInterval = setInterval(() => this.tick(), 1000/30); // 60 FPS
+        this.tickerInterval = setInterval(() => this.tick(), 1000/20); // 60 FPS
         // Bind network to ongoing config changes
         this.config.bindNetwork(this)
     }
@@ -115,8 +117,11 @@ export class SwimNetwork {
         // Inject gossip into the node that is sending the action
         this.getNode(action.from)?.injectGossip(networkAction);
 
-        // Mark the action as lost if it intersects with any partition
-        if(this.actionIntersectsWithAnyPartition(networkAction)) {
+        // Mark the action as lost if it intersects with any partition or as part of a random drop
+        if(
+            this.actionIntersectsWithAnyPartition(networkAction) ||
+            this.randomlyDropAction()
+        ) {
             networkAction.options.actionLost = true;
         }
 
@@ -130,6 +135,10 @@ export class SwimNetwork {
         }
 
         networkAction.rerender(this.config, this.graphData.edges);
+    }
+
+    protected randomlyDropAction(){
+        return PACKET_LOSS_CHANCE !== null && PACKET_LOSS_CHANCE > Math.random()
     }
 
     /**

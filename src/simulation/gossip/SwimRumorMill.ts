@@ -66,6 +66,10 @@ export class SwimRumorMill {
         })
     }
 
+    public isNodeThoughtToBeDead(nodeId: number): boolean {
+        return this.rumors.doesDeadNodeRumorExistForNode(nodeId)
+    }
+
     /**
      * Clears out all rumors from the rumor mill.
      */

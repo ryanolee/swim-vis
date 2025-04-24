@@ -7,8 +7,8 @@ import { RUMOR_TYPES, SwimRumor, SwimRumorType } from "./SwimRumorMill"
  */
 const GOSSIP_BIAS: Record<SwimRumorType, number> = {
     "alive": 1,
-    "dead": 1,
-    "suspect": 1,
+    "dead": 0.25,
+    "suspect": 0.5,
 }
 
 type KnownSwimRumor = {
@@ -21,7 +21,7 @@ type KnownSwimRumor = {
 // Should be n log(x)
 // where x is the number of nodes in the network
 // and n is a small constant. Given the known small size of the network just set to a constant
-const MAXIMUM_SHARES = 4
+const MAXIMUM_SHARES = 7
 
 /**
  * Buffer for a single type of rumor
@@ -55,7 +55,7 @@ export class SwimRumorBuffer {
     }
 
     /**
-     * Two pass process to get the most even distribution of gossip types
+     * Three pass process to get the most even distribution of gossip types
      * 1. Attempt to get an even distribution of gossip types with the least number of shares
      * 2. If we don't have enough gossip take the least shared rumors
      */
@@ -70,6 +70,10 @@ export class SwimRumorBuffer {
         // Pass 1: Attempt to get even distribution of gossip types to share
         for(let i = 0; i < this.buffer.length; i++) {
             const item = this.buffer[i]
+            if (item.numberOfTimesGossiped >= MAXIMUM_SHARES) {
+                continue
+            }
+
             if (numberOfTypesObtained[item.rumor.type] < targetThreshold) {
                 numberOfTypesObtained[item.rumor.type]++
                 gossipToShare.push(item.rumor)
@@ -85,8 +89,15 @@ export class SwimRumorBuffer {
 
         // Pass 2: If we don't have enough gossip, just take the rest of the buffer
         if(gossipToShare.length < n) {
+            
             for(let i = 0; i < this.buffer.length; i++) {
                 const item = this.buffer[i]
+
+                // Assume Array is in sorted order
+                if (item.numberOfTimesGossiped >= MAXIMUM_SHARES) {
+                    break
+                }
+
                 if (!gossipToShare.includes(item.rumor)) {
                     gossipToShare.push(item.rumor)
                     this.buffer[i].numberOfTimesGossiped += GOSSIP_BIAS[item.rumor.type]
@@ -99,12 +110,15 @@ export class SwimRumorBuffer {
         }
         
         // Take the gossip to share and reorder the rest
-        this.evictOldRumors()
         this.resortBuffer()
 
         return gossipToShare
     }
 
+    public doesDeadNodeRumorExistForNode(id: number) {
+        // Check if there is a dead rumor for the node
+        return this.buffer.some((r) => r.rumor.type === "dead" && r.rumor.subject === id)
+    }
     public peekAtRumors() {
         return this.buffer.map(r => r.rumor)
     }
@@ -133,17 +147,6 @@ export class SwimRumorBuffer {
             acc.set(rumor.rumor.subject, rumor.rumor)
             return acc
         }, new Map<number, SwimRumor>())
-    }
-
-    protected evictOldRumors() {
-        this.buffer = this.buffer.map((r) => {
-            if(r.numberOfTimesGossiped > MAXIMUM_SHARES) {
-                this.knownRumors.delete(r.rumor.subject)
-                return null
-            }
-
-            return r
-        }).filter((r) => r !== null) as KnownSwimRumor[]
     }
 
     protected alreadyKnowsRumor(rumor: SwimRumor): boolean {
