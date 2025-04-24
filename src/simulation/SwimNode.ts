@@ -545,6 +545,7 @@ export class SwimNode {
         // Mark node as accepted but also be somewhat suspicious of it
         this.suspectedNodeIds.add(nodeId);
         this.addKnownNodeId(nodeId)
+        this.rerender()
     }
 
     protected acceptDeathRumor(nodeId: number): void {
@@ -728,9 +729,6 @@ export class SwimNode {
 
         return this.label;
     }
-
-    
-
 
     static arrayShuffle<T>(array: T[]): T[]{
         return array.map(value => ({ value, sort: Math.random() }))
