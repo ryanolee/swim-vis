@@ -7,7 +7,7 @@ const PING_INTERVAL_TICKS = 100;
 
 
 const TIMEOUT_TICKS = 100;
-const TIMEOUT_SUSPECT_TICKS = 10000;
+const TIMEOUT_SUSPECT_TICKS = 2000;
 const EXPECTATION_CHECK_INTERVAL = 5;
 const RANDOM_PEERS_PING_REQ = 3;
 
@@ -564,7 +564,10 @@ export class SwimNode {
 
     protected acceptAliveRumor(nodeId: number): void {
         // If we are accepting that a node is alive clear any suspicion of us having it
+        // Or the failure detector from restarting the rumor to quickly
         this.removeExpectation("clear_suspicion", nodeId);
+        this.removeExpectation("receive_ack_or_death", nodeId);
+
         this.suspectedNodeIds.delete(nodeId);
 
         this.addKnownNodeId(nodeId);

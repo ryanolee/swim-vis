@@ -1,8 +1,8 @@
-import { useNodeUiConfigReducer } from "@/hooks/useNodeUiConfigReducer"
-import { SWIM_NODE_ACTION_TYPES } from "@/simulation/SwimNetworkActions"
-import { DEFAULT_PACKET_LOSS, DEFAULT_SPEED, SWIM_DISSEMINATION_APPROACHES, SWIM_OVERLAY_MODES, SWIM_PING_APPROACHES } from "@/simulation/SwimNetworkConfig"
-import { SwimConfigSelector } from "./inputs/SwimConfigSelector"
 import { SwimSlider } from "@/components/controls/inputs/SwimSlider";
+import { useNodeUiConfigReducer } from "@/hooks/useNodeUiConfigReducer";
+import { SWIM_NODE_ACTION_TYPES } from "@/simulation/SwimNetworkActions";
+import { DEFAULT_PACKET_LOSS, DEFAULT_SPEED, SWIM_DISSEMINATION_APPROACHES, SWIM_OVERLAY_MODES, SWIM_PING_APPROACHES } from "@/simulation/SwimNetworkConfig";
+import { SwimConfigSelector } from "./inputs/SwimConfigSelector";
 
 export const SwimNetworkConfigControls: React.FC = () => {
     const [config, dispatch] = useNodeUiConfigReducer()

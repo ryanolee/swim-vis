@@ -20,6 +20,26 @@ function App() {
         <hr/>
         <SwimNetworkPlacement />
         <hr/>
+        <div className="mt-5 text-center text-sm">
+          <div className="flex justify-center gap-4">
+            <a 
+              href="https://github.com/ryanolee/swim-vis/blob/main/docs/instructions.md" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-gray-500 no-underline"
+            >
+              Help
+            </a>
+            <a 
+              href="https://github.com/ryanolee/swim-vis" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-gray-500 no-underline"
+            >
+              Github
+            </a>
+          </div>
+        </div>
       </Sidebar>
     </SwimNetworkProvider>
   </GraphProvider>;
