@@ -6,16 +6,15 @@ export const SWIM_PING_APPROACHES = [
     "random",
     "round_robin"
 ] as const
-export const DEFAULT_PING_APPROACH = "random"
+export const DEFAULT_PING_APPROACH = "round_robin"
 export type SwimPingApproachType = typeof SWIM_PING_APPROACHES[number]
-
 
 export const SWIM_DISSEMINATION_APPROACHES = [
     "multicast",
     "gossip",
     "gossip_with_suspicion",
 ] as const
-export const DEFAULT_DISSEMINATION_APPROACH = "multicast"
+export const DEFAULT_DISSEMINATION_APPROACH = "gossip_with_suspicion"
 export type SwimDisseminationApproachType = typeof SWIM_DISSEMINATION_APPROACHES[number]
 
 export const SWIM_OVERLAY_MODES = [
@@ -23,11 +22,20 @@ export const SWIM_OVERLAY_MODES = [
     "who_knows_who",
     "who_do_i_know"
 ] as const
-
 export type SwimOverlayModeType = typeof SWIM_OVERLAY_MODES[number]
 
-export const DEFAULT_OVERLAY_MODE: SwimOverlayModeType = "none"
+export const DEFAULT_OVERLAY_MODE: SwimOverlayModeType = "who_knows_who"
 
+export const SWIM_NODE_PLACEMENT_TYPES = [
+    "none",
+    "grid",
+    "circle",
+]
+
+export type SwimNodePlacementType = typeof SWIM_NODE_PLACEMENT_TYPES[number]
+export const DEFAULT_NODE_PLACEMENT: SwimNodePlacementType = "circle"
+
+export const DEFAULT_ENABLED_PHYSICS = true
 export const DEFAULT_SPEED = 1
 export const DEFAULT_PACKET_LOSS = 0.05
 
@@ -37,10 +45,11 @@ export class SwimNetworkConfig {
     public pingApproach: SwimPingApproachType = DEFAULT_PING_APPROACH
     public disseminationApproach: SwimDisseminationApproachType = DEFAULT_DISSEMINATION_APPROACH
     public overlayMode: SwimOverlayModeType = DEFAULT_OVERLAY_MODE
+    public nodePlacementType: SwimNodePlacementType = DEFAULT_NODE_PLACEMENT
     public simulationSpeed: number = DEFAULT_SPEED
     public packetLoss: number = DEFAULT_PACKET_LOSS
     public selectedNodeId: number | null = null
-    public enablePhysics: boolean = true
+    public enablePhysics: boolean = DEFAULT_ENABLED_PHYSICS
 
     public constructor(
         protected onEventFilterChange: () => void = () => {},
@@ -158,6 +167,12 @@ export class SwimNetworkConfig {
         if(loss !== this.packetLoss){
             this.packetLoss = loss
             this.onPacketLossChange()
+        }
+    }
+
+    public setNodePlacementType(type: typeof SWIM_NODE_PLACEMENT_TYPES[number]){
+        if(type !== this.nodePlacementType){
+            this.nodePlacementType = type
         }
     }
 }

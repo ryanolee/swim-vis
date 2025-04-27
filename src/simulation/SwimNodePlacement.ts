@@ -5,6 +5,42 @@ export class SwimNodePlacement {
         public sn: SwimNetwork,
     ) {}
 
+    public setNodePlacementBasedOnConfig(){
+        console.log("Setting node placement based on config", this.sn.config.nodePlacementType)
+        switch (this.sn.config.nodePlacementType) {
+            case "grid":
+                this.updateNodeIntoGrid()
+                break
+            case "circle":
+                this.updateNodesIntoCircle()
+                break
+            case "none":
+                // Noop
+                break
+            default:
+                console.warn("Unknown node placement type", this.sn.config.nodePlacementType)
+                break
+        }
+    }
+
+    public updateNodeIntoGrid(){
+        const nodes = this.sn.getAllNodeIds()
+        const gridWidth = Math.ceil(Math.sqrt(nodes.length))
+
+        nodes.forEach((id, index) => {
+            const x = (index % gridWidth) * 100
+            const y = Math.floor(index / gridWidth) * 100
+
+            this.sn.graphData.nodes.update({
+                id: id,
+                x: x,
+                y: y,
+            })
+        })
+
+        this.resetCamera()
+    }
+
     public updateNodesIntoCircle(){
         const nodes = this.sn.getAllNodeIds()
         
@@ -13,14 +49,18 @@ export class SwimNodePlacement {
 
         this.placeNodesInCircle(activeNodes, 0, 0)
         this.placeNodesInCircle(inactiveNodes, (inactiveNodes.length + activeNodes.length) * 10 + 300, 0)
+        this.resetCamera()
+    }
 
+    protected resetCamera(){
+        const nodes = this.sn.getAllNodeIds()
         this.sn.graph.moveTo({
             animation: false,
             position: {
                 x: 0,
                 y: 0,
             },
-            scale: 1 - (activeNodes.length / 150),
+            scale: 1 - (nodes.length / 150),
         })
     }
 

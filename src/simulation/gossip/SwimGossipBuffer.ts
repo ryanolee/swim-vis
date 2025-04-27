@@ -21,7 +21,7 @@ type KnownSwimRumor = {
 // Should be n log(x)
 // where x is the number of nodes in the network
 // and n is a small constant. Given the known small size of the network just set to a constant
-const MAXIMUM_SHARES = 7
+const MAXIMUM_SHARES = 8
 
 /**
  * Buffer for a single type of rumor

@@ -1,11 +1,11 @@
 import { SwimSlider } from "@/components/controls/inputs/SwimSlider";
-import { useNodeUiConfigReducer } from "@/hooks/useNodeUiConfigReducer";
 import { SWIM_NODE_ACTION_TYPES } from "@/simulation/SwimNetworkActions";
 import { DEFAULT_PACKET_LOSS, DEFAULT_SPEED, SWIM_DISSEMINATION_APPROACHES, SWIM_OVERLAY_MODES, SWIM_PING_APPROACHES } from "@/simulation/SwimNetworkConfig";
 import { SwimConfigSelector } from "./inputs/SwimConfigSelector";
+import { useConfigContext } from "@/contexts/ConfigContext";
 
 export const SwimNetworkConfigControls: React.FC = () => {
-    const [config, dispatch] = useNodeUiConfigReducer()
+    const [config, dispatch] = useConfigContext()
     return <>
         <h2 className="text-lg font-semibold mb-4">Network Configuration</h2>
         <h3 className="text-md font-semibold mb-2">Action Type Filters</h3>
@@ -65,7 +65,21 @@ export const SwimNetworkConfigControls: React.FC = () => {
             label="Overlay Mode"
             description="Set what information should be shown when a node is selected."
         />
-        <h3 className="text-md font-semibold mb-2">Network speed</h3>
+        <h3 className="text-md font-semibold mb-2">Other settings</h3>
+        <label className="flex items-center gap-2 mb-2 cursor-pointer select-none">
+            <input
+                type="checkbox"
+                checked={config.enablePhysics}
+                onChange={() =>
+                    dispatch({
+                        type: "set_enable_physics",
+                        enablePhysics: !config.enablePhysics,
+                    })
+                }
+                className="form-checkbox h-4 w-4 text-blue-600"
+            />
+            <span className="text-gray-800">Enable Physics</span>
+        </label>
         <SwimSlider
             min={0.1}
             max={10}
@@ -75,7 +89,7 @@ export const SwimNetworkConfigControls: React.FC = () => {
                 type: "set_simulation_speed",
                 simulationSpeed: value
             })}}
-            description="Set the network simulation speed."
+            description="Set Simulation Speed (0.1 to 10 times speed)"
         />
         <SwimSlider
             min={0}
@@ -86,7 +100,7 @@ export const SwimNetworkConfigControls: React.FC = () => {
                 type: "set_packet_loss",
                 packetLoss: value
             })}}
-            description="Set the number of packets randomly lost on the network"
+            description="Set random Packet loss percentage (0% to 100%)"
         />
     </>
 }

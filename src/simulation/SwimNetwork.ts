@@ -7,7 +7,7 @@ import { SwimNodePlacement } from "./SwimNodePlacement";
 
 const NETWORK_TICK_LATENCY = 30;
 
-const MAXIMUM_NUMBER_OF_RENDERED_ACTIONS_WITH_PHYSICS = 100;
+const MAXIMUM_NUMBER_OF_RENDERED_ACTIONS_WITH_PHYSICS = 150;
 const MAXIMUM_NUMBER_OF_RENDERED_ACTIONS = 300;
 const FAILSAFE_RENDER_INTERVAL = NETWORK_TICK_LATENCY
 
@@ -61,13 +61,13 @@ export class SwimNetwork {
         
         // Register with visualization library
         node.rerender();
-        this.placement?.updateNodesIntoCircle()
+        this.placement?.setNodePlacementBasedOnConfig()
         return node;
     }
 
     public removeNode(id: number): void {
         this.getNode(id)?.leaveNetwork();
-        this.placement?.updateNodesIntoCircle()
+        this.placement?.setNodePlacementBasedOnConfig()
     }
 
     public addPartition(id: number){

@@ -2,7 +2,7 @@ import { SwimNodeAction } from "@/simulation/SwimNetworkActions"
 import { SwimNode } from "../SwimNode"
 import { SwimRumorBuffer } from "./SwimGossipBuffer"
 
-const MAX_GOSSIP_PER_ACTION = 6
+const MAX_GOSSIP_PER_ACTION = 8
 const GOSSIP_BUFFER_SIZE = 30
 
 export const RUMOR_TYPES = [

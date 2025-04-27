@@ -598,7 +598,9 @@ export class SwimNode {
     }
 
     public hasLeft(): boolean {
-        return this.left;
+        // Check if the node has left the network
+        // or if it has heard of its own death given that is an irrecoverable state
+        return this.left || this.hasHeardOfOwnDeath;
     }
 
     public isKnown(peerId: number): boolean{
