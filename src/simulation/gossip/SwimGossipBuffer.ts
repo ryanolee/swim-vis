@@ -55,7 +55,7 @@ export class SwimRumorBuffer {
     }
 
     /**
-     * Three pass process to get the most even distribution of gossip types
+     * Two pass process to get the most even distribution of gossip types
      * 1. Attempt to get an even distribution of gossip types with the least number of shares
      * 2. If we don't have enough gossip take the least shared rumors
      */
