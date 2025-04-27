@@ -7,7 +7,7 @@ A interactive visulisation tool for the [SWIM protocol](https://www.cs.cornell.e
 This tool aims to visulise the original SWIM Protocol as closely as possible to the original paper and does not include later improvements made to the protocol in such as the ones made in [surf](https://github.com/hashicorp/serf).
 
 ## How to use
-Visit (the simulator)[ryanolee.github.io/swim-vis/] and click the "Open Panel" button to get started. For more information on how to use the simulator please see the [usage guide](docs/instructions.md).
+Visit [the simulator](ryanolee.github.io/swim-vis/) and click the "Open Panel" button to get started. For more information on how to use the simulator please see the [usage guide](docs/instructions.md).
 
 ## Development
 To get started with development you will need to install the following dependencies:
