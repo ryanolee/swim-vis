@@ -22,6 +22,7 @@ const SHARE_TOGGLES: { key: ShareToggleKey, label: string }[] = [
     { key: "allowDeleteNodes", label: "Pinned: allow deleting nodes" },
     { key: "allowRefresh", label: "Pinned: show refresh page button" },
     { key: "pinAddNodeButton", label: "Pin add node button top right" },
+    { key: "hideBakedOverlay", label: "Hide baked options overlay" },
 ];
 
 export const SwimNetworkShareControls: React.FC = () => {
@@ -37,6 +38,7 @@ export const SwimNetworkShareControls: React.FC = () => {
         allowDeleteNodes: urlPreset?.allowDeleteNodes ?? false,
         allowRefresh: urlPreset?.allowRefresh ?? false,
         pinAddNodeButton: urlPreset?.pinAddNodeButton ?? false,
+        hideBakedOverlay: urlPreset?.hideBakedOverlay ?? false,
     });
     const [baked, setBaked] = useState<BakeableOption[]>(urlPreset?.baked ?? []);
 

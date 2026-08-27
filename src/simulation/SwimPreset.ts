@@ -63,6 +63,7 @@ export type SwimShareOptions = {
     allowDeleteNodes?: boolean
     allowRefresh?: boolean
     pinAddNodeButton?: boolean
+    hideBakedOverlay?: boolean
 }
 
 /**
@@ -94,6 +95,8 @@ export type SwimPreset = {
     allowRefresh?: boolean
     /** Pin an add node button to the top right of the screen */
     pinAddNodeButton?: boolean
+    /** Keep baked options locked but do not show them in the overlay */
+    hideBakedOverlay?: boolean
     pingApproach?: SwimPingApproachType
     disseminationApproach?: SwimDisseminationApproachType
     overlayMode?: SwimOverlayModeType
@@ -230,6 +233,7 @@ export const decodePreset = (encoded: string): SwimPreset | null => {
         allowDeleteNodes: raw.allowDeleteNodes === true || undefined,
         allowRefresh: raw.allowRefresh === true || undefined,
         pinAddNodeButton: raw.pinAddNodeButton === true || undefined,
+        hideBakedOverlay: raw.hideBakedOverlay === true || undefined,
         pingApproach: pickOption(raw.pingApproach, SWIM_PING_APPROACHES),
         disseminationApproach: pickOption(raw.disseminationApproach, SWIM_DISSEMINATION_APPROACHES),
         overlayMode: pickOption(raw.overlayMode, SWIM_OVERLAY_MODES),
@@ -424,6 +428,7 @@ export const snapshotPreset = (network: SwimNetwork, options: SwimShareOptions =
         allowDeleteNodes: options.allowDeleteNodes || undefined,
         allowRefresh: options.allowRefresh || undefined,
         pinAddNodeButton: options.pinAddNodeButton || undefined,
+        hideBakedOverlay: options.hideBakedOverlay || undefined,
         pingApproach: config.pingApproach,
         disseminationApproach: config.disseminationApproach,
         overlayMode: config.overlayMode,

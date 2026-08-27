@@ -20,6 +20,7 @@ describe('SwimPreset codec', () => {
             allowDeleteNodes: true,
             allowRefresh: true,
             pinAddNodeButton: true,
+            hideBakedOverlay: true,
             pingApproach: "random",
             disseminationApproach: "gossip",
             overlayMode: "none",

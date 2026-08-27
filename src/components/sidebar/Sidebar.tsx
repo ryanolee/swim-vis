@@ -12,7 +12,7 @@ export const Sidebar: React.FC<SwimControlPanelProps> = ({title, children}) => {
     <>
       {/* Toggle Button */}
       <button
-        className="fixed top-6 left-6 z-50 bg-blue-600 text-white px-4 py-2 rounded shadow-lg hover:bg-blue-700 transition"
+        className="fixed top-6 left-6 z-50 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
         onClick={() => setIsOpen((open) => !open)}
         aria-label={isOpen ? "Close control panel" : "Open control panel"}
       >
@@ -21,7 +21,7 @@ export const Sidebar: React.FC<SwimControlPanelProps> = ({title, children}) => {
 
       {/* Side Panel */}
       <div
-        className={`fixed top-0 left-0 h-full w-80 bg-white shadow-2xl z-50 transition-transform duration-300 ${
+        className={`fixed top-0 left-0 h-full w-80 bg-white z-50 transition-transform duration-300 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         style={{ pointerEvents: isOpen ? "auto" : "none" }}

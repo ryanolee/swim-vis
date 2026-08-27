@@ -3,7 +3,7 @@ import SwimNetworkPartitionControls from "@/components/controls/SwimNetworkParti
 import { useNodeControlsContext } from "@/contexts/NodeControlsContext";
 import { useSwimNetworkContext } from "@/contexts/SwimNetworkContext";
 import { SwimNetworkConfig } from "@/simulation/SwimNetworkConfig";
-import { BAKEABLE_OPTION_LABELS, BakeableOption, getBakedOptions, getPinnedControls } from "@/simulation/SwimPreset";
+import { BAKEABLE_OPTION_LABELS, BakeableOption, getBakedOptions, getPinnedControls, getPresetFromUrl } from "@/simulation/SwimPreset";
 import React from "react";
 
 const formatValue = (option: BakeableOption, config: SwimNetworkConfig): string => {
@@ -28,7 +28,8 @@ const formatValue = (option: BakeableOption, config: SwimNetworkConfig): string 
 export const SwimBakedOverlay: React.FC = () => {
     const network = useSwimNetworkContext();
     const [, dispatchNodeAction] = useNodeControlsContext();
-    const baked = getBakedOptions();
+    // Options stay locked either way, hideBakedOverlay only hides the display
+    const baked = getPresetFromUrl()?.hideBakedOverlay ? [] : getBakedOptions();
     const pinned = getPinnedControls();
 
     const showPanel = baked.length > 0 || pinned.nodes || pinned.partitions || pinned.refresh;
@@ -39,7 +40,7 @@ export const SwimBakedOverlay: React.FC = () => {
     return (
         <>
         {pinned.addNodeButton && (
-            <div className="fixed top-6 right-6 z-40 rounded-lg bg-white/60 backdrop-blur-md shadow-lg p-2">
+            <div className="fixed top-6 right-6 z-40 rounded-lg bg-white/60 backdrop-blur-md p-2">
                 <button
                     className="bg-blue-600 text-white rounded p-2"
                     onClick={() => dispatchNodeAction({ type: "add" })}
@@ -48,7 +49,7 @@ export const SwimBakedOverlay: React.FC = () => {
                 </button>
             </div>
         )}
-        {showPanel && <div className="fixed top-20 left-6 z-40 rounded-lg bg-white/60 backdrop-blur-md shadow-lg p-4 text-sm w-72 max-h-[calc(100vh-7rem)] overflow-y-auto">
+        {showPanel && <div className="fixed top-20 left-6 z-40 rounded-lg bg-white/60 backdrop-blur-md p-4 text-sm w-72 max-h-[calc(100vh-7rem)] overflow-y-auto">
             {baked.length > 0 && (
                 <div className="mb-4">
                     <h3 className="font-semibold mb-2 text-gray-800">Locked settings</h3>
