@@ -17,6 +17,23 @@ export class SwimNetworkPartition {
         this.rerender(this.sn)
     }
 
+    public isActive(): boolean {
+        return this.active
+    }
+
+    public getStartPosition(): Position | null {
+        return this.getXYFromId(this.id + NODE_OFFSET)
+    }
+
+    public getEndPosition(): Position | null {
+        return this.getXYFromId(this.id + (NODE_OFFSET * 2))
+    }
+
+    public setPositions(start: Position, end: Position): void {
+        this.sn.graphData.nodes.update({ id: this.id + NODE_OFFSET, x: start.x, y: start.y })
+        this.sn.graphData.nodes.update({ id: this.id + (NODE_OFFSET * 2), x: end.x, y: end.y })
+    }
+
     public rerender(sn: SwimNetwork){
         sn.graphData.nodes.update({
             id: this.id + NODE_OFFSET,

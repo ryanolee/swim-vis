@@ -100,6 +100,10 @@ export class SwimNetwork {
         return Object.keys(this.nodes).map(id => parseInt(id));
     }
 
+    public getAllPartitionIds(): number[] {
+        return Object.keys(this.partitions).map(id => parseInt(id));
+    }
+
     public getCurrentTick(): number {
         return this.currentTick
     }

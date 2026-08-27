@@ -1,5 +1,6 @@
 import { SwimNetwork } from "@/simulation/SwimNetwork";
 import { SwimNetworkConfig } from "@/simulation/SwimNetworkConfig";
+import { applyPresetToNetwork, getPresetFromUrl } from "@/simulation/SwimPreset";
 import { createContext, useContext, useMemo } from "react";
 import { useGraphContext } from "./GraphContext";
 
@@ -9,7 +10,17 @@ export const SwimNetworkProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const graphContext = useGraphContext();
-  const swimNetwork = useMemo(() => new SwimNetwork(graphContext.graph, graphContext.data, new SwimNetworkConfig()), [graphContext]);
+  const swimNetwork = useMemo(() => {
+    const network = new SwimNetwork(graphContext.graph, graphContext.data, new SwimNetworkConfig());
+
+    // Preconfigure the simulation when the page was opened with a preset URL
+    const preset = getPresetFromUrl();
+    if (preset) {
+      applyPresetToNetwork(network, preset);
+    }
+
+    return network;
+  }, [graphContext]);
   
   return (
     <SwimNetworkContext.Provider value={swimNetwork}>

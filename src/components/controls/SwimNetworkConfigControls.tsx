@@ -1,6 +1,7 @@
 import { SwimSlider } from "@/components/controls/inputs/SwimSlider";
 import { SWIM_NODE_ACTION_TYPES } from "@/simulation/SwimNetworkActions";
-import { DEFAULT_PACKET_LOSS, DEFAULT_SPEED, SWIM_DISSEMINATION_APPROACHES, SWIM_OVERLAY_MODES, SWIM_PING_APPROACHES } from "@/simulation/SwimNetworkConfig";
+import { SWIM_DISSEMINATION_APPROACHES, SWIM_OVERLAY_MODES, SWIM_PING_APPROACHES } from "@/simulation/SwimNetworkConfig";
+import { isOptionBaked } from "@/simulation/SwimPreset";
 import { SwimConfigSelector } from "./inputs/SwimConfigSelector";
 import { useConfigContext } from "@/contexts/ConfigContext";
 
@@ -29,7 +30,7 @@ export const SwimNetworkConfigControls: React.FC = () => {
                 <span className="text-gray-800">{filterType}</span>
             </label>
         ))}
-        <SwimConfigSelector
+        {!isOptionBaked("pingApproach") && <SwimConfigSelector
             options={SWIM_PING_APPROACHES}
             onChange={(selected) => {
                 dispatch({
@@ -40,8 +41,8 @@ export const SwimNetworkConfigControls: React.FC = () => {
             defaultValue={config.pingApproach}
             label="Ping Approach"
             description="Select the ping approach to use in the network."
-        />
-        <SwimConfigSelector
+        />}
+        {!isOptionBaked("disseminationApproach") && <SwimConfigSelector
             options={SWIM_DISSEMINATION_APPROACHES}
             onChange={(selected) => {
                 dispatch({
@@ -52,8 +53,8 @@ export const SwimNetworkConfigControls: React.FC = () => {
             defaultValue={config.disseminationApproach}
             label="Dissemination Approach"
             description="Select the dissemination approach to use in the network."
-        />
-        <SwimConfigSelector
+        />}
+        {!isOptionBaked("overlayMode") && <SwimConfigSelector
             options={SWIM_OVERLAY_MODES}
             onChange={(selected) => {
                 dispatch({
@@ -64,9 +65,9 @@ export const SwimNetworkConfigControls: React.FC = () => {
             defaultValue={config.overlayMode}
             label="Overlay Mode"
             description="Set what information should be shown when a node is selected."
-        />
+        />}
         <h3 className="text-md font-semibold mb-2">Other settings</h3>
-        <label className="flex items-center gap-2 mb-2 cursor-pointer select-none">
+        {!isOptionBaked("enablePhysics") && <label className="flex items-center gap-2 mb-2 cursor-pointer select-none">
             <input
                 type="checkbox"
                 checked={config.enablePhysics}
@@ -79,28 +80,28 @@ export const SwimNetworkConfigControls: React.FC = () => {
                 className="form-checkbox h-4 w-4 text-blue-600"
             />
             <span className="text-gray-800">Enable Physics</span>
-        </label>
-        <SwimSlider
+        </label>}
+        {!isOptionBaked("simulationSpeed") && <SwimSlider
             min={0.1}
             max={10}
             step={0.1}
-            initialValue={DEFAULT_SPEED}
+            initialValue={config.simulationSpeed}
             onChange={(value: number) => {dispatch({
                 type: "set_simulation_speed",
                 simulationSpeed: value
             })}}
             description="Set Simulation Speed (0.1 to 10 times speed)"
-        />
-        <SwimSlider
+        />}
+        {!isOptionBaked("packetLoss") && <SwimSlider
             min={0}
             max={1}
             step={0.01}
-            initialValue={DEFAULT_PACKET_LOSS}
+            initialValue={config.packetLoss}
             onChange={(value: number) => {dispatch({
                 type: "set_packet_loss",
                 packetLoss: value
             })}}
             description="Set random Packet loss percentage (0% to 100%)"
-        />
+        />}
     </>
 }
