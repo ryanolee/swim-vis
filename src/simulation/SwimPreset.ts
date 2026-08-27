@@ -67,12 +67,12 @@ export type SwimShareOptions = {
 
 /**
  * A serializable snapshot of a simulation setup that can be shared as a URL.
- * Nodes are restored alive unless listed in faulty/left.
+ * Nodes are restored alive unless listed in faulty. Left nodes are not
+ * persisted, the roster only contains members still in the network.
  */
 export type SwimPreset = {
     nodes: number
     faulty?: number[]
-    left?: number[]
     /** Node coordinates indexed by node id */
     positions?: [number, number][]
     partitions?: SwimPresetPartition[]
@@ -214,14 +214,10 @@ export const decodePreset = (encoded: string): SwimPreset | null => {
     }
 
     const nodeCount = Math.floor(nodes);
-    const left = sanitizeIdList(raw.left, nodeCount);
-    // A node cannot be both left and faulty, left wins
-    const faulty = sanitizeIdList(raw.faulty, nodeCount)?.filter(id => !left?.includes(id));
 
     return {
         nodes: nodeCount,
-        faulty: faulty?.length ? faulty : undefined,
-        left,
+        faulty: sanitizeIdList(raw.faulty, nodeCount),
         positions: sanitizePositions(raw.positions, nodeCount),
         partitions: sanitizePartitions(raw.partitions),
         camera: sanitizeCamera(raw.camera),
@@ -315,9 +311,7 @@ export const applyPresetToNetwork = (network: SwimNetwork, preset: SwimPreset): 
     const meshIds: number[] = [];
     const spawnNode = (id: number) => {
         const node = network.addNode(id);
-        if (preset.left?.includes(id)) {
-            node.leaveNetwork();
-        } else if (preset.fullMesh) {
+        if (preset.fullMesh) {
             node.makeAwareOf(meshIds);
             meshIds.forEach(peer => network.getNode(peer)?.makeAwareOf([id]));
             meshIds.push(id);
@@ -381,13 +375,13 @@ export const applyPresetToNetwork = (network: SwimNetwork, preset: SwimPreset): 
  * Captures the current state of a running network as a preset, so it can be
  * resumed from a URL. Membership knowledge and in flight messages are not
  * captured, only the roster, node states, positions, partitions, camera
- * and configuration.
+ * and configuration. Left nodes are dropped and the surviving roster is
+ * re-indexed from zero.
  */
 export const snapshotPreset = (network: SwimNetwork, options: SwimShareOptions = {}): SwimPreset => {
     const config = network.config;
-    const nodeIds = network.getAllNodeIds();
-    const faulty = nodeIds.filter(id => network.getNode(id)?.isFaulty());
-    const left = nodeIds.filter(id => network.getNode(id)?.hasLeft());
+    const nodeIds = network.getAllNodeIds().filter(id => !network.getNode(id)?.hasLeft());
+    const faulty = nodeIds.flatMap((id, index) => network.getNode(id)?.isFaulty() ? [index] : []);
 
     const graphPositions = network.graph.getPositions(nodeIds);
     const positions = nodeIds.map((id): [number, number] => [
@@ -414,7 +408,6 @@ export const snapshotPreset = (network: SwimNetwork, options: SwimShareOptions =
     return {
         nodes: nodeIds.length,
         faulty: faulty.length > 0 ? faulty : undefined,
-        left: left.length > 0 ? left : undefined,
         positions: positions.length > 0 ? positions : undefined,
         partitions: partitions.length > 0 ? partitions : undefined,
         camera: {

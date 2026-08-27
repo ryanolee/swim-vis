@@ -5,7 +5,6 @@ describe('SwimPreset codec', () => {
         const preset: SwimPreset = {
             nodes: 3,
             faulty: [2],
-            left: [1],
             positions: [[0, 0], [100, -50], [200, 300]],
             partitions: [
                 { start: { x: -10, y: 20 }, end: { x: 30, y: 40 }, active: true },
@@ -100,13 +99,10 @@ describe('SwimPreset codec', () => {
     it('sanitizes node state id lists', () => {
         const decoded = decodePreset(encodePreset({
             nodes: 3,
-            // Out of range, duplicate and non numeric ids should be dropped,
-            // and a node cannot be both left and faulty
+            // Out of range, duplicate and non numeric ids should be dropped
             faulty: [0, 0, 1, 99, -1, "evil"],
-            left: [1, 3.5],
         } as unknown as SwimPreset))
 
-        expect(decoded?.faulty).toEqual([0])
-        expect(decoded?.left).toEqual([1])
+        expect(decoded?.faulty).toEqual([0, 1])
     })
 })

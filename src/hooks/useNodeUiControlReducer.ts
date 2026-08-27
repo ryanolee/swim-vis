@@ -71,7 +71,6 @@ export const useNodeUiControlReducer = () => {
 
   // Seed the ui state from the preset roster (rather than the live network)
   // so that nodes still joining under sequenced join are listed immediately.
-  // Left nodes stay out of the list, matching how removal behaves in the ui.
   return useReducer(reducer, null, (): UiState => {
     const preset = getPresetFromUrl();
     if (!preset) {
@@ -80,13 +79,11 @@ export const useNodeUiControlReducer = () => {
 
     return {
       idCounter: preset.nodes,
-      nodes: Array.from({ length: preset.nodes }, (_, id) => id)
-        .filter(id => !preset.left?.includes(id))
-        .map(id => ({
-          id,
-          label: `Node id ${id}`,
-          fault: preset.faulty?.includes(id) ?? false,
-        })),
+      nodes: Array.from({ length: preset.nodes }, (_, id) => ({
+        id,
+        label: `Node id ${id}`,
+        fault: preset.faulty?.includes(id) ?? false,
+      })),
     };
   });
 }
