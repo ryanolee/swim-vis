@@ -1,15 +1,18 @@
-import { useNodeUiControlReducer } from "@/hooks/useNodeUiControlReducer";
+import { useNodeControlsContext } from "@/contexts/NodeControlsContext";
 import React from "react";
 
-const SwimNetworkControls: React.FC = () => {
-    const [state, dispatch] = useNodeUiControlReducer()
+const SwimNetworkControls: React.FC<{
+    showAdd?: boolean,
+    showRemove?: boolean,
+}> = ({ showAdd = true, showRemove = true }) => {
+    const [state, dispatch] = useNodeControlsContext()
 
     return (
         <>
             <h2 className="text-lg font-semibold mb-4">Network Controls</h2>
-            <button className="bg-blue-600 text-white rounded p-2" onClick={() => dispatch({ type: "add" })}>
+            {showAdd && <button className="bg-blue-600 text-white rounded p-2" onClick={() => dispatch({ type: "add" })}>
                 Add Node
-            </button>
+            </button>}
             {state.nodes.map((node) => (
                 <div key={node.id} className="flex items-center justify-between p-2 border-b">
                     <span>{node.label}</span>
@@ -22,9 +25,9 @@ const SwimNetworkControls: React.FC = () => {
                             "Faulty" : "Healthy"}
                     </button>
 
-                    <button className="text-red-600" onClick={() => dispatch({ type: "remove", payload: { id: node.id } })}>
+                    {showRemove && <button className="text-red-600" onClick={() => dispatch({ type: "remove", payload: { id: node.id } })}>
                         Remove
-                    </button>
+                    </button>}
                 </div>
             ))}
         </>

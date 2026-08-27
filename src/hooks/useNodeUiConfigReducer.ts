@@ -1,6 +1,6 @@
 import { useSwimNetworkContext } from "@/contexts/SwimNetworkContext";
 import { SwimNodeActionType } from "@/simulation/SwimNetworkActions";
-import { DEFAULT_DISSEMINATION_APPROACH, DEFAULT_ENABLED_PHYSICS, DEFAULT_NODE_PLACEMENT, DEFAULT_OVERLAY_MODE, DEFAULT_PACKET_LOSS, DEFAULT_PING_APPROACH, DEFAULT_SPEED, SwimDisseminationApproachType, SwimNodePlacementType, SwimOverlayModeType, SwimPingApproachType } from "@/simulation/SwimNetworkConfig";
+import { SwimDisseminationApproachType, SwimNodePlacementType, SwimOverlayModeType, SwimPingApproachType } from "@/simulation/SwimNetworkConfig";
 import { useCallback, useReducer } from "react";
 
 export type UiConfigAction = {
@@ -106,14 +106,15 @@ export const useNodeUiConfigReducer = () => {
     }   
   }, [swimNetwork]);
 
+  // Mirror the live network config so preset urls are reflected in the ui
   return useReducer(reducer, {
     actionTypeFilters: [],
-    pingApproach: DEFAULT_PING_APPROACH, 
-    disseminationApproach: DEFAULT_DISSEMINATION_APPROACH,
-    overlayMode: DEFAULT_OVERLAY_MODE,
-    simulationSpeed: DEFAULT_SPEED,
-    packetLoss: DEFAULT_PACKET_LOSS,
-    nodePlacementType: DEFAULT_NODE_PLACEMENT,
-    enablePhysics: DEFAULT_ENABLED_PHYSICS,
+    pingApproach: swimNetwork.config.pingApproach,
+    disseminationApproach: swimNetwork.config.disseminationApproach,
+    overlayMode: swimNetwork.config.overlayMode,
+    simulationSpeed: swimNetwork.config.simulationSpeed,
+    packetLoss: swimNetwork.config.packetLoss,
+    nodePlacementType: swimNetwork.config.nodePlacementType,
+    enablePhysics: swimNetwork.config.enablePhysics,
   } as UIConfigState);
 }

@@ -148,7 +148,9 @@ export class SwimNode {
 
     // Action receivers
     public receiveAction(action: SwimNetworkAction): void {
-        if (this.faulty) {
+        // Faulty, left and confirmed-dead nodes are all silent: a departed node
+        // must stop acking so the failure detector can notice it is gone.
+        if (this.disabled) {
             return;
         }
 
@@ -270,21 +272,8 @@ export class SwimNode {
         })
     }
 
-    protected handleMulticastDeath(action: SwimNetworkAction): void {
-        if (typeof action.payload.subject !== "number") {
-            console.warn("Malformed multicast death: missing 'subject' in payload", action);
-            return;
-        }
-
-        this.markNodeAsDead(action.payload.subject);
-    }
-
     protected handleInitialJoin(action: SwimNetworkAction): void {
         this.disseminateJoin(action.from);
-    }
-
-    protected handleMulticastLeave(action: SwimNetworkAction): void {
-        this.markNodeAsLeft(action.from);
     }
 
     // Expectation Handlers
@@ -331,12 +320,8 @@ export class SwimNode {
     }
 
     protected sendPingReq( target: number){
-        const peers = this.getNRandomPeers(RANDOM_PEERS_PING_REQ)
+        const peers = this.getNRandomPeers(RANDOM_PEERS_PING_REQ, target)
         for(const peer of peers){
-            // Don' send a ping to dead nodes
-            if(peer === target) {
-                continue
-            }
             this.sn.dispatchAction({
                 type: "ping_req",
                 from: this.id,
@@ -366,7 +351,7 @@ export class SwimNode {
     protected markNodeAsLeft(target: number): void {
         this.clearExpectationsFrom(target);
         this.knownNodeIds.delete(target);
-        this,this.clearRoundRobinBuffer()
+        this.clearRoundRobinBuffer()
         this.rerender()
     }
 
@@ -497,8 +482,34 @@ export class SwimNode {
         return this.knownIncarnationNumbers.get(nodeId) ?? 0;
     }
 
+    /**
+     * SWIM precedence rules: dead (confirm) always applies, suspect needs an
+     * incarnation number >= the known one, and alive needs a strictly higher
+     * incarnation number to clear an existing suspicion.
+     */
+    protected isStaleRumor(rumor: SwimRumor): boolean {
+        if (rumor.type === "dead") {
+            return false;
+        }
+
+        const knownIncarnationNumber = this.getIncarnationNumberForNode(rumor.subject);
+        if (rumor.incarnationNumber < knownIncarnationNumber) {
+            return true;
+        }
+
+        return rumor.type === "alive"
+            && rumor.incarnationNumber === knownIncarnationNumber
+            && this.suspectedNodeIds.has(rumor.subject);
+    }
+
     public handleRumor(rumor: SwimRumor): void {
         if (this.faulty) {
+            return;
+        }
+
+        // Enforce the paper's precedence against membership state, not just the
+        // gossip buffer: stale rumors that outlive the buffer must still be dropped.
+        if (this.isStaleRumor(rumor)) {
             return;
         }
 
@@ -607,11 +618,19 @@ export class SwimNode {
         return this.knownNodeIds.has(peerId)
     }
 
+    /**
+     * Directly seeds this node's membership list, used when restoring a
+     * preset where all nodes should already know each other.
+     */
+    public makeAwareOf(nodeIds: number[]): void {
+        nodeIds.forEach(id => this.addKnownNodeId(id));
+    }
+
 
     // Internal peer getters
-    protected getNRandomPeers(n: number): number[] {
-        const knownPeers = SwimNode.arrayShuffle(Array.from(this.knownNodeIds));
-        return knownPeers.slice(0, Math.min(this.knownNodeIds.size, n))
+    protected getNRandomPeers(n: number, exclude: number | null = null): number[] {
+        const knownPeers = SwimNode.arrayShuffle(Array.from(this.knownNodeIds).filter(id => id !== exclude));
+        return knownPeers.slice(0, Math.min(knownPeers.length, n))
     }
 
     /**

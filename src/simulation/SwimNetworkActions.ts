@@ -2,7 +2,7 @@ import { SwimRumor } from "@/simulation/gossip/SwimRumorMill";
 import { DataSet, Edge } from "vis-network/declarations/entry-standalone";
 import { SwimNetworkConfig } from "./SwimNetworkConfig";
 
-export const SWIM_NODE_ACTION_TYPES =  ["ping" , "timeout" , "ack" ,  "ping_req",  "join" , "multicast_join" , "multicast_leave" , "multicast_death"] as const
+export const SWIM_NODE_ACTION_TYPES =  ["ping" , "ack" ,  "ping_req",  "join" , "multicast_join" , "multicast_leave" , "multicast_death"] as const
 export type SwimNodeActionType = typeof SWIM_NODE_ACTION_TYPES[number]
 
 /**

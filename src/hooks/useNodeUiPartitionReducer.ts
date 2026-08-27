@@ -1,4 +1,5 @@
 import { useSwimNetworkContext } from "@/contexts/SwimNetworkContext";
+import { getPresetFromUrl } from "@/simulation/SwimPreset";
 import { useCallback, useReducer } from "react";
 
 export type UiPartitionState = {
@@ -67,8 +68,12 @@ export const useNodeUiPartitionReducer = () => {
     }
   }, [swimNetwork]);
 
-  return useReducer(reducer, {
-    idCounter: 0,
-    partitions: [],
-  } );
+  // Seed the ui state with partitions restored from a preset url
+  return useReducer(reducer, null, (): UiPartitionState => {
+    const partitions = getPresetFromUrl()?.partitions ?? [];
+    return {
+      idCounter: partitions.length,
+      partitions: partitions.map((partition, id) => ({ id, active: partition.active })),
+    };
+  });
 }
